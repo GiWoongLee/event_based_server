@@ -18,6 +18,8 @@ public class HttpServer implements Runnable {
 	private RequestProcessor requestProcessor;
 
 	private ByteBuffer buf;
+    //Test to attachment of Selector
+    private ByteBuffer tempBuf;
 
 	private Selector selector;
 	private int socketOps = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
@@ -37,6 +39,7 @@ public class HttpServer implements Runnable {
 
 
 		buf = ByteBuffer.allocate(24);
+		tempBuf = ByteBuffer.allocate(24);
 //		requestProcessor = new RequestProcessor();
 
 		//register ssc into selector
@@ -88,37 +91,53 @@ public class HttpServer implements Runnable {
 
 						//Find Request from Client/Response to Client
 						else{
-
 							SocketChannel client = (SocketChannel) selectedChannel;
 
 							//Request from Client
                             //Channel에서 Buffer로 Byte들을 적은 다음, Buffer.get()으로 해당 data를 읽어들인다
 							if(key.isReadable()){
-							    int readStatus = client.read(buf);
-							    buf.flip();
-							    System.out.print("# Server read: ");
-							    if(readStatus!= -1){
-                                    while(buf.hasRemaining()){
-                                        System.out.print((char)buf.get());
-                                    }
-                                    System.out.println("\n");
-                                }
-							    buf.clear();
-//                                  requestProcessor.process(key);
+							    //Test Case1
+                                client.read(tempBuf);
+                                tempBuf.flip();
+                                key.attach(tempBuf);
+
+                                //Test Case2
+//							    int readStatus = client.read(buf);
+//							    buf.flip();
+//							    System.out.print("# Server read: ");
+//							    if(readStatus!= -1){
+//                                    while(buf.hasRemaining()){
+//                                        System.out.print((char)buf.get());
+//                                    }
+//                                    System.out.println("\n");
+//                                }
+//							    buf.clear();
+////                                  requestProcessor.process(key);
 							}
 
 							//Make Response to Client
                             //쓰고 싶은 내역을 Buffer.put()하고 Buffer에서 Channel로 정보를 read한다
 							if(key.isWritable()){
-							    String temp = "Hello Client!";
-							    byte[] bytes = temp.getBytes();
-							    buf.clear();
-							    buf.put(bytes);
-							    buf.flip();
-							    client.write(buf);
-							    buf.clear();
-							    System.out.println("# Server write :" + temp);
-                                //Heap Buffer Which is made from requestProcessor
+
+							    //Test Case 1
+							    ByteBuffer tempBuf2  = (ByteBuffer) key.attachment();
+							    if(tempBuf2 == null) continue;
+							    else {
+							        client.write(tempBuf2);
+							        key.attach(null);
+                                }
+
+                                //Test Case 2
+//							    String temp = "Hello Client!";
+//							    byte[] bytes = temp.getBytes();
+//							    buf.clear();
+//							    buf.put(bytes);
+//							    buf.flip();
+//							    client.write(buf);
+//							    buf.clear();
+//							    System.out.println("# Server write :" + temp);
+
+							    //Heap Buffer Which is made from requestProcessor
 //							    ByteBuffer responseBuffer = (ByteBuffer)key.attachment();
 //							    client.write(responseBuffer);
 							}

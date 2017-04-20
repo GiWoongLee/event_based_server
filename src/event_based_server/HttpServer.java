@@ -1,6 +1,7 @@
 package event_based_server;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
@@ -16,8 +17,10 @@ public class HttpServer implements Runnable {
 	private ServerSocketChannel server;
 	private RequestProcessor requestProcessor;
 
+	private ByteBuffer buf;
+
 	private Selector selector;
-	private int socketOps = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
+//	private int socketOps = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
 	
 	public HttpServer(int port) throws IOException{
 
@@ -28,10 +31,13 @@ public class HttpServer implements Runnable {
 		server = ServerSocketChannel.open();
 		server.configureBlocking(false);
 
-		InetSocketAddress address = new InetSocketAddress(port);
+		InetAddress hostIPAddress = InetAddress.getByName("localhost");
+		InetSocketAddress address = new InetSocketAddress(hostIPAddress,port);
 		server.socket().bind(address);
 
-		requestProcessor = new RequestProcessor();
+
+		buf = ByteBuffer.allocate(24);
+//		requestProcessor = new RequestProcessor();
 
 		//register ssc into selector
 		selector = Selector.open();
@@ -41,17 +47,25 @@ public class HttpServer implements Runnable {
 	
 	public void run(){
 		try{
-			while(true){
-				System.out.println("Server Started");
+            System.out.println("Server Started");
+            System.out.println("***************************");
+            System.out.println("클라이언트의 접속을 기다리고 있습니다");
+            System.out.println("***************************");
+            while(true){
 				int readyKeys = selector.select();
 				if(readyKeys>0){
-					Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
-					
+				    Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
+
 					while(iter.hasNext()){
 						SelectionKey key = iter.next();
-						
-						SelectableChannel selectedChannel = key.channel();
+                        iter.remove();
 
+						System.out.println(key.isConnectable());
+                        System.out.println(key.isAcceptable());
+                        System.out.println(key.isReadable());
+                        System.out.println(key.isWritable());
+
+						SelectableChannel selectedChannel = key.channel();
 						//Connect Request from Client to Server
 						if(selectedChannel instanceof ServerSocketChannel){
 							ServerSocketChannel serverChannel = (ServerSocketChannel) selectedChannel;
@@ -60,34 +74,58 @@ public class HttpServer implements Runnable {
                             //Case2 : If found, connect client
 							SocketChannel client = serverChannel.accept();
 							if(client==null){
+							    System.out.println("Null server socket");
 								continue;
 							}
+							System.out.println("#socket accepted\n" + client);
 
 							//Change socketChannel from Blocking(default) to Non-Blocking State
 							client.configureBlocking(false);
 
 							//Register Client to Selector to find out request/response from/to Client
-							client.register(selector, socketOps);
+//							client.register(selector, socketOps);
+                            client.register(selector, SelectionKey.OP_READ);
 						}
 
 						//Find Request from Client/Response to Client
 						else{
+
 							SocketChannel client = (SocketChannel) selectedChannel;
 
 							//Request from Client
+                            //Channel에서 Buffer로 Byte들을 적은 다음, Buffer.get()으로 해당 data를 읽어들인다
 							if(key.isReadable()){
-                                requestProcessor.process(key);
+							    int readStatus = client.read(buf);
+							    buf.flip();
+							    System.out.println("#Socket read: ");
+							    if(readStatus!= -1){
+                                    while(buf.hasRemaining()){
+                                        System.out.print((char)buf.get());
+                                    }
+                                    System.out.println("\n");
+                                }
+							    buf.clear();
+                                client.register(selector, SelectionKey.OP_WRITE);
+//                                  requestProcessor.process(key);
 							}
 
 							//Make Response to Client
+                            //쓰고 싶은 내역을 Buffer.put()하고 Buffer에서 Channel로 정보를 read한다
 							else if(key.isWritable()){
-							    //Heap Buffer Which is made from requestProcessor
-							    ByteBuffer responseBuffer = (ByteBuffer)key.attachment();
-							    client.write(responseBuffer);
+							    String temp = "Hello Client!";
+							    byte[] bytes = temp.getBytes();
+							    buf.clear();
+							    buf.put(bytes);
+							    buf.flip();
+							    client.write(buf);
+							    buf.clear();
+							    System.out.println("# socket write :" + temp);
+                                client.register(selector, SelectionKey.OP_READ);
+                                //Heap Buffer Which is made from requestProcessor
+//							    ByteBuffer responseBuffer = (ByteBuffer)key.attachment();
+//							    client.write(responseBuffer);
 							}
 						}
-
-                        iter.remove();
 					}
 				}
 			}
@@ -101,5 +139,10 @@ public class HttpServer implements Runnable {
 			}
 		}
 	}
+
+	public static void main(String[] args) throws IOException {
+        HttpServer server = new HttpServer(3000);
+        new Thread(server).start();
+    }
 	
 }

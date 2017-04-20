@@ -1,14 +1,9 @@
 package event_based_server;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.Selector;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.util.Iterator;
 
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -56,6 +51,12 @@ public class RequestProcessor {
                 kernelBuffer.flip();
                 return new String(kernelBuffer.array());
             }
+
+            //Test
+            while(kernelBuffer.hasRemaining()){
+                System.out.println((char)kernelBuffer.get());
+            }
+
         }catch(IOException e){
             e.printStackTrace();
         }

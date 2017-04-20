@@ -24,12 +24,15 @@ public class HttpClient {
             buf.clear();
             System.out.println("# Client write: " + temp);
 
+            int readStatus = client.read(buf);
             buf.flip();
-            System.out.println("# Client read: ");
-            while (buf.hasRemaining()) {
-                System.out.print((char) buf.get());
+            System.out.print("# Client read: ");
+            if(readStatus!= -1){
+                while(buf.hasRemaining()){
+                    System.out.print((char)buf.get());
+                }
+                System.out.println("\n");
             }
-            System.out.println("\n");
             buf.clear();
         }
     }

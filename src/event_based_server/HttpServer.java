@@ -20,7 +20,7 @@ public class HttpServer implements Runnable {
 	private ByteBuffer buf;
 
 	private Selector selector;
-//	private int socketOps = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
+	private int socketOps = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
 	
 	public HttpServer(int port) throws IOException{
 
@@ -60,7 +60,7 @@ public class HttpServer implements Runnable {
 						SelectionKey key = iter.next();
                         iter.remove();
 
-						System.out.println(key.isConnectable());
+                        System.out.println(key.isConnectable());
                         System.out.println(key.isAcceptable());
                         System.out.println(key.isReadable());
                         System.out.println(key.isWritable());
@@ -83,8 +83,7 @@ public class HttpServer implements Runnable {
 							client.configureBlocking(false);
 
 							//Register Client to Selector to find out request/response from/to Client
-//							client.register(selector, socketOps);
-                            client.register(selector, SelectionKey.OP_READ);
+							client.register(selector, socketOps);
 						}
 
 						//Find Request from Client/Response to Client
@@ -97,7 +96,7 @@ public class HttpServer implements Runnable {
 							if(key.isReadable()){
 							    int readStatus = client.read(buf);
 							    buf.flip();
-							    System.out.println("#Socket read: ");
+							    System.out.print("# Server read: ");
 							    if(readStatus!= -1){
                                     while(buf.hasRemaining()){
                                         System.out.print((char)buf.get());
@@ -105,13 +104,12 @@ public class HttpServer implements Runnable {
                                     System.out.println("\n");
                                 }
 							    buf.clear();
-                                client.register(selector, SelectionKey.OP_WRITE);
 //                                  requestProcessor.process(key);
 							}
 
 							//Make Response to Client
                             //쓰고 싶은 내역을 Buffer.put()하고 Buffer에서 Channel로 정보를 read한다
-							else if(key.isWritable()){
+							if(key.isWritable()){
 							    String temp = "Hello Client!";
 							    byte[] bytes = temp.getBytes();
 							    buf.clear();
@@ -119,8 +117,7 @@ public class HttpServer implements Runnable {
 							    buf.flip();
 							    client.write(buf);
 							    buf.clear();
-							    System.out.println("# socket write :" + temp);
-                                client.register(selector, SelectionKey.OP_READ);
+							    System.out.println("# Server write :" + temp);
                                 //Heap Buffer Which is made from requestProcessor
 //							    ByteBuffer responseBuffer = (ByteBuffer)key.attachment();
 //							    client.write(responseBuffer);

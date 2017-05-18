@@ -63,10 +63,10 @@ public class HttpServer implements Runnable {
 						SelectionKey key = iter.next();
                         iter.remove();
 
-                        System.out.println(key.isConnectable());
-                        System.out.println(key.isAcceptable());
-                        System.out.println(key.isReadable());
-                        System.out.println(key.isWritable());
+//                        System.out.println(key.isConnectable());
+//                        System.out.println(key.isAcceptable());
+//                        System.out.println(key.isReadable());
+//                        System.out.println(key.isWritable());
 
 						SelectableChannel selectedChannel = key.channel();
 						//Connect Request from Client to Server

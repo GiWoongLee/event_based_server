@@ -5,39 +5,32 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.SelectionKey;
 
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
-
 public class RequestProcessor {
 
     private SelectionKey requestedKey;
     private ByteBuffer kernelBuffer;
     private ByteBuffer heapBuffer;
-    private HttpParser httpParser;
-
-    private Charset iso8859;
-    private CharsetDecoder iso8859Decoder;
-    private Charset euckr;
-    private CharsetEncoder euckrEncoder;
-
+    private HttpHandler httpHandler;
+    private HttpInfo httpParsedInfo;
 
     public RequestProcessor(){
         kernelBuffer = ByteBuffer.allocateDirect(1024);
         heapBuffer = ByteBuffer.allocate(1024);
-
-        iso8859 = Charset.forName("iso-8859-1");
-        iso8859Decoder = iso8859.newDecoder();
-        euckr = Charset.forName("euc-kr");
-        euckrEncoder = euckr.newEncoder();
-
+        httpParsedInfo = new HttpInfo();
     }
 
     public void process(SelectionKey requestedKey){
         this.requestedKey = requestedKey;
+        //Step 1 : Read request from client and transform bytes into String
         String requestMsg = readRequestMsg();
-        Object something = httpParser.parse(requestMsg);
-        handle(something);
+        //Step 2 : Parse Http Format String into useful info : URL, Method, Protocol
+        int status = httpHandler.parseHttpRequestMsg(requestMsg,httpParsedInfo);
+        //Step 3 : Following request msg, handle task in a two way - CPU or light-IO Bound/ Heavy-IO Bound
+        Object res = handle();
+        //Step 4 : After finishing handling the request, store info in a format of Http Response to ByteBuffer
+        httpHandler.processMsgInHttpResponseFormat(res,heapBuffer);
+        //Step 5 : Attach buffer to key to make response in a for loop
+        requestedKey.attach(heapBuffer);
     }
 
     private String readRequestMsg(){
@@ -51,7 +44,6 @@ public class RequestProcessor {
                 kernelBuffer.flip();
                 return new String(kernelBuffer.array());
             }
-
             //Test
             while(kernelBuffer.hasRemaining()){
                 System.out.println((char)kernelBuffer.get());
@@ -63,10 +55,12 @@ public class RequestProcessor {
         return "<<<some result>>>";
     }
 
-    private void handle(Object something/*<<<Change DataType/Name>>>*/){
-        //File IO/Memory&Disk IO/Something else... Happening
-        //Have to store in kernelBuffer, regarding efficiency and whole structure
-        //Copy kernelBuffer to heapBuffer(result of handler)
-        requestedKey.attach(heapBuffer);
+    private Object handle(){
+        //Step 1 : Following httpParsedInfo, do stuff
+        //Case 1 : CPU/light IO Bound handling
+        //Case 2 : Heavy IO Bound handling(File IO/Memory&Disk IO)
+        return "<<<some result>>>";
     }
+
+
 }

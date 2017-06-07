@@ -7,21 +7,23 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.ByteBuffer;
 
-public class HttpClient {
+public class HttpClient2 {
 
     private final String USER_AGENT = "Chrome/7.0.517.44";
 
     public static void main(String[] args) throws Exception {
-        HttpClient httpClient = new HttpClient();
 
-        while(true){
+        HttpClient2 httpClient = new HttpClient2();
+
+        while(true) {
             System.out.println("Testing 1 - Send Http GET request");
             httpClient.sendGet();
         }
+
 //        System.out.println("Testing 2 - Send Http POST request");
 //        httpClient.sendPost();
+
     }
 
     private void sendGet() throws Exception{
@@ -36,20 +38,18 @@ public class HttpClient {
 
         int responseCode = connection.getResponseCode();
         System.out.println("\nSending 'GET' request to URL => " + url);
-        System.out.println("Response Code :" + responseCode +"\n");
+        System.out.println("Response Code :" + responseCode);
 
         BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         String inputLine;
         StringBuffer response = new StringBuffer();
-        inputLine = input.readLine();
-        response.append(inputLine);
-//        while((inputLine = input.readLine())!=null){
-//            response.append(inputLine);
-//        }
+
+        while((inputLine = input.readLine())!=null){
+            response.append(inputLine);
+        }
         input.close();
 
         System.out.println(response.toString());
-
     }
 
     private void sendPost() throws Exception{
@@ -78,6 +78,7 @@ public class HttpClient {
                 new InputStreamReader(con.getInputStream()));
         String inputLine;
         StringBuffer response = new StringBuffer();
+
         while ((inputLine = in.readLine()) != null) {
             response.append(inputLine);
         }

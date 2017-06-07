@@ -140,6 +140,7 @@ public class HttpParser {
             if (headers == null) ret = 400;
         }
         else if (cmd[0].equals("POST")) {
+            //TODO : Implement Parsing Body Content
             ret = 501; // not implemented
         }
         else if (ver[0] == 1 && ver[1] >= 1) {
@@ -226,6 +227,7 @@ public class HttpParser {
 
         ret = null;
         key = "" + codevalue;
+        //FIXME : Refactoring with Hash Table
         for (i=0; i<HttpReplies.length; i++) {
             if (HttpReplies[i][0].equals(key)) {
                 ret = codevalue + " " + HttpReplies[i][1];

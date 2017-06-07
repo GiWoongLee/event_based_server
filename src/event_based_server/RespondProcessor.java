@@ -8,26 +8,30 @@ import java.nio.CharBuffer;
 import java.nio.ByteBuffer;
 import java.io.IOException;
 
-//https://github.com/maulufia/async_server_test/blob/master/src/kr/co/jm/RequestProcessor.java
 public class RespondProcessor {
+    private HttpParser httpParser;
     private ByteBuffer headerBuffer;
     private Charset euckr;
     private CharsetEncoder euckrEncoder;
 
-    //Make Http form response with result
-    //Need to use buffer to send through socket channel
     public RespondProcessor(){
         euckr = Charset.forName("euc-kr");
+        euckrEncoder = euckr.newEncoder();
+        httpParser = new HttpParser();
     }
 
-    public void createHeaderBuffer() throws CharacterCodingException{
-        CharBuffer chars = CharBuffer.allocate(88);
-        chars.put("HTTP/1.1 200 OK\n");
-        chars.put("Connection: close\n");
+    public ByteBuffer createHeaderBuffer(int status) throws CharacterCodingException{
+        CharBuffer chars = CharBuffer.allocate(1092);
+        chars.put("HTTP/1.1 "); //TODO: Refactoring following http response Format
+        chars.put(HttpParser.getHttpReply(status)+ "\n");
+        chars.put(httpParser.getDateHeader()+ "\n");
         chars.put("Server: testServer\n");
-        chars.put("Content-Type: text/html\n");
+        chars.put("Content-Length: 230\n");
+        chars.put("Content-Type: text/html; charset=iso-8859-1\n");
+        chars.put("Connection: closed\n");
         chars.put("\n");
         chars.flip();
         headerBuffer = euckrEncoder.encode(chars);
+        return headerBuffer;
     }
 }

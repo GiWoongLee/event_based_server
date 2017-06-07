@@ -1,48 +1,45 @@
 package event_based_server;
 
-
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
-
+import java.nio.channels.SocketChannel;
+import java.nio.ByteBuffer;
 
 public class RequestProcessor {
-
-    private ByteBuffer kernelBuffer;
-    private ByteBuffer heapBuffer;
+    private RespondProcessor respondProcessor;
     private HttpParser httpParser;
     private FileIOThread fileIOThread;
-
+    private ByteBuffer buf;
 
     public RequestProcessor(){
-//        kernelBuffer = ByteBuffer.allocateDirect(1024);
-//        heapBuffer = ByteBuffer.allocate(1024);
+        respondProcessor = new RespondProcessor();
         httpParser = new HttpParser();
         fileIOThread = new FileIOThread();
+        buf = ByteBuffer.allocate(1024);
     }
 
     public void process(SelectionKey clientKey, byte[] httpMsg) throws IOException {
-//        Step 1 : Parse Http Request and Retrieve related info
-        int status = httpParser.parseRequest(httpMsg);
-//        System.out.println(httpParser.getMethod());
-//        System.out.println(httpParser.getRequestURL());
-//        System.out.println(httpParser.getVersion());
-//        System.out.println(httpParser.getHeaders());
-//        System.out.println(httpParser.getParams());
+        int status = httpParser.parseRequest(httpMsg); //NOTE : parse http request and get the result of parsing
 
-        if(status==200){
-            //Step2 : classify heavy/light workload
+        System.out.println(httpParser.getMethod());  //Test : Print out httpParsed Info
+        System.out.println(httpParser.getRequestURL());
+        System.out.println(httpParser.getVersion());
+        System.out.println(httpParser.getHeaders());
+        System.out.println(httpParser.getParams());
 
-            //Step3 : Handle light workload, Activate other threads for the heavy workload
-            fileIOThread.handle(clientKey,httpParser);
-            //Step4 : Pass result to respondProcessor to make callback(response)
+        if(status==200){ //NOTE : Valid Http Request from client
+            //TODO: if(HEAVY WORKLOAD) - Defined by requests that require IO tasks
+            fileIOThread.handle(clientKey,httpParser); // NOTE : Activate Thread Pool to process task
 
-
-//        requestedKey.attach(heapBuffer);
-
+            //TODO: else - Defined by requests that don't require IO tasks
+            //TODO: **NEED TO IDENTIFY WHAT IS LIGHT WORKLOAD TASK**
+            //TODO: current thread process the task
         }
         else{
-//            Exception Handling
+            buf = respondProcessor.createHeaderBuffer(status); //NOTE: Buffer Size Need to be same as the buffer used in RespondProcessor
+            SocketChannel clientChannel = (SocketChannel)clientKey.channel();
+            clientChannel.write(buf);
+            buf.clear();
         }
 
     }

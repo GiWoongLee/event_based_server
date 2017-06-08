@@ -46,7 +46,7 @@ public class MainController implements Runnable {
 	}
 
 
-	public void run(){
+	public void run() {
 		try{
             System.out.println("Server Started"); // Test: Message
             System.out.println("****************************");
@@ -136,6 +136,7 @@ public class MainController implements Runnable {
 		} catch(IOException e){
 			e.printStackTrace();
 		} finally{
+            // FIXME user 가 접속을 차단했을 때 에러에 의해 서버가 종료되는 문제 발생. exception handling 수정 필요.
 			try{
 				server.close();
 			} catch(IOException e){

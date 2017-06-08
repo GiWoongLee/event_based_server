@@ -32,29 +32,29 @@ public class MainController implements Runnable {
 		server.configureBlocking(false);
 
 		InetAddress hostIPAddress = InetAddress.getByName("localhost"); //FIXME : Fix Server Name
-		InetSocketAddress address = new InetSocketAddress(hostIPAddress,port);
+		InetSocketAddress address = new InetSocketAddress(hostIPAddress, port);
 		server.socket().bind(address);
 
-
+        // FIXME 버퍼 할당이 connection 별로 되는게 아니라 서버 전체에서 하나만 되고있음.
 		buf = ByteBuffer.allocate(2048); //FIXME : Adjust buffer size with JMeter Test
 
 		requestProcessor = new RequestProcessor();
 		respondProcessor = new RespondProcessor();
 
 		selector = Selector.open();
-		server.register(selector,SelectionKey.OP_ACCEPT); //NOTE: register ssc into selector
+		server.register(selector, SelectionKey.OP_ACCEPT); //NOTE: register ssc into selector
 	}
-	
-	
+
+
 	public void run(){
 		try{
             System.out.println("Server Started"); // Test: Message
             System.out.println("****************************");
             System.out.println("Waiting For Client Connection");
             System.out.println("****************************");
-            while(true){
+            while(true) {
 				int readyKeys = selector.select();
-				if(readyKeys>0){
+				if(readyKeys > 0){
 				    Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
 
 					while(iter.hasNext()){
@@ -64,17 +64,17 @@ public class MainController implements Runnable {
 						SelectableChannel selectedChannel = key.channel();
 
 
-						if(selectedChannel instanceof ServerSocketChannel){
+						if(selectedChannel instanceof ServerSocketChannel) {
 							ServerSocketChannel serverChannel = (ServerSocketChannel) selectedChannel;
 
 							SocketChannel clientChannel = serverChannel.accept(); //Connect Request from Client to Server
 
-							if(clientChannel==null){
-							    System.out.println("Null server socket");
+							if(clientChannel == null) {
+							    System.out.println("Null server socket.");
 								continue;
 							}
 
-							System.out.println("#socket accepted\n" + clientChannel); // Test : server accepting new connection from new client
+							System.out.println("#socket accepted. Incoming connection from: \n" + clientChannel); // Test : server accepting new connection from new client
 
 							clientChannel.configureBlocking(false); //Change socketChannel from Blocking(default) to Non-Blocking State
 
@@ -84,7 +84,7 @@ public class MainController implements Runnable {
 						else{
 							SocketChannel clientChannel = (SocketChannel) selectedChannel;
 
-							if(key.isReadable()){
+							if(key.isReadable()) {
 								int bytesCount = clientChannel.read(buf); // from client channel, read request msg and write into buffer
 								if (bytesCount > 0) {
 									buf.flip(); //make buffer ready to read
@@ -125,6 +125,8 @@ public class MainController implements Runnable {
 
 									buf.clear();
 							        key.attach(null);
+                                    //	write  이후 interestOp 가 read 로 바뀌지 않아서 write 무한 루프 이슈. 해결.
+                                    key.interestOps(SelectionKey.OP_READ);
                                 }
 							}
 						}

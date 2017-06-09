@@ -14,13 +14,13 @@ import java.nio.file.Path;
 
 class FileIOThread {
     private ExecutorService executorService;
-    private InMemoryCache<String, byte[]> cache;
+    private InMemoryCache<String> cache;
 
     FileIOThread() {
         executorService = Executors.newFixedThreadPool(
                 Constants.THREAD_POOL_SIZE
         );
-        cache = new InMemoryCache<>(200, 500, 6);
+        cache = new InMemoryCache<String>(Constants.CACHE_TIME_TO_LIVE, Constants.CACHE_TIMER_INTERVAL, Constants.CACHE_MAX_ITEMS, Constants.CACHE_BYTE_SIZE);
     }
 
     // private CompletionHandler<byte[], SelectionKey> callback = new CompletionHandler<byte[], SelectionKey>() {
@@ -47,14 +47,14 @@ class FileIOThread {
             Path path = Paths.get("./server-root/" + filePath);
             try {
                 byte[] data;
-                byte[] cachedData = cache.get(filePath);
+                ByteArrayWrapper cachedData = cache.get(filePath);
 
                 if (cachedData != null) {
                     System.out.println("CachedData exists!");
-                    data = cachedData;
+                    data = cachedData.getByteArray();
                 } else {
                     data = Files.readAllBytes(path);
-                    cache.put(filePath, data);
+                    cache.put(filePath, new ByteArrayWrapper(data));
                 }
 
                 clientKey.attach(data); //NOTE: send result to event queue

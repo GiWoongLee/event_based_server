@@ -119,6 +119,7 @@ public class MainController implements Runnable {
             if (bytesCount > 0) {
                 buf.flip(); //make buffer ready to read
 
+                System.out.println("#channel reading. Buffer as below: ");
                 byte[] requestMsgInBytes = new byte[buf.remaining()]; // NOTE(REFACTORING) : Process ByteBuffer into String to parse as a Http Msg
                 buf.get(requestMsgInBytes); // Without this process, buf returns string not considering empty arrays
                 System.out.println(new String(requestMsgInBytes)); //Test : Print out Http Request Msg
@@ -159,6 +160,7 @@ public class MainController implements Runnable {
             buf.put(ByteBuffer.wrap(body));
             buf.flip();
 
+            System.out.println("#channel writing. Buffer as below: ");
             byte[] requestMsgInBytes = new byte[buf.remaining()]; //Test : Print out Http Request Msg
             buf.get(requestMsgInBytes);
             System.out.println(new String(requestMsgInBytes));

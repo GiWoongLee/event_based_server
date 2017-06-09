@@ -8,23 +8,26 @@ import org.apache.commons.collections4.map.LRUMap;
 /**
  * Created by soo on 2017. 6. 10..
  */
-class InMemoryCache<K, T> {
+class InMemoryCache<K> {
     private long timeToLive;
-    private final LRUMap<K, CacheObject<T>> cacheMap;
+    private final LRUMap<K, CacheObject> cacheMap;
+    private final long maxByteSize;
+    private long currentByteSize;
 
-    class CacheObject<CT> {
+    class CacheObject {
         long lastAccessed = System.currentTimeMillis();
-        CT value;
+        ByteArrayWrapper value;
 
-        CacheObject(CT value) {
+        CacheObject(ByteArrayWrapper value) {
             this.value = value;
         }
     }
 
-    InMemoryCache(long timeToLive, final long timerInterval, int maxItems) {
+    InMemoryCache(long timeToLive, final long timerInterval, int maxItems, long maxByteSize) {
         this.timeToLive = timeToLive * 1000;
-
-        cacheMap = new LRUMap<>(maxItems);
+        this.cacheMap = new LRUMap<>(maxItems);
+        this.maxByteSize = maxByteSize;
+        this.currentByteSize = 0;
 
         if (timeToLive > 0 && timerInterval > 0) {
 
@@ -46,15 +49,18 @@ class InMemoryCache<K, T> {
         }
     }
 
-    void put(K key, T value) {
+    void put(K key, ByteArrayWrapper value) {
         synchronized (cacheMap) {
-            cacheMap.put(key, new CacheObject<>(value));
+            if (maxByteSize >= currentByteSize + value.getByteArray().length) {
+                currentByteSize += value.getByteArray().length;
+                cacheMap.put(key, new CacheObject(value));
+            }
         }
     }
 
-    T get(K key) {
+    ByteArrayWrapper get(K key) {
         synchronized (cacheMap) {
-            CacheObject<T> c = cacheMap.get(key);
+            CacheObject c = cacheMap.get(key);
 
             if (c == null)
                 return null;
@@ -67,6 +73,7 @@ class InMemoryCache<K, T> {
 
     void remove(K key) {
         synchronized (cacheMap) {
+            currentByteSize -= cacheMap.get(key).value.getByteArray().length;
             cacheMap.remove(key);
         }
     }
@@ -82,7 +89,7 @@ class InMemoryCache<K, T> {
         ArrayList<K> deleteKey = null;
 
         synchronized (cacheMap) {
-            MapIterator<K, CacheObject<T>> itr = cacheMap.mapIterator();
+            MapIterator<K, CacheObject> itr = cacheMap.mapIterator();
 
             deleteKey = new ArrayList<K>((cacheMap.size() / 2) + 1);
             K key = null;

@@ -14,7 +14,7 @@ public class RespondProcessor {
     private Charset euckr;
     private CharsetEncoder euckrEncoder;
 
-    public RespondProcessor(){
+    public RespondProcessor() {
         euckr = Charset.forName("euc-kr");
         euckrEncoder = euckr.newEncoder();
         httpParser = new HttpParser();

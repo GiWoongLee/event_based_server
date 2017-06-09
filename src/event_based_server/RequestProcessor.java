@@ -2,20 +2,20 @@ package event_based_server;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
-import java.nio.ByteBuffer;
+// import java.nio.channels.SocketChannel;
+// import java.nio.ByteBuffer;
 
 class RequestProcessor {
-    private RespondProcessor respondProcessor; // FIXME for write
+    // private RespondProcessor respondProcessor; // FIXME for write
     private HttpParser httpParser;
     private FileIOThread fileIOThread;
-    private ByteBuffer buf; // FIXME for write
+    // private ByteBuffer buf; // FIXME for write
 
     RequestProcessor() {
-        respondProcessor = new RespondProcessor();
+        // respondProcessor = new RespondProcessor();
         httpParser = new HttpParser();
         fileIOThread = new FileIOThread();
-        buf = ByteBuffer.allocate(Constants.MAIN_BUFFER_SIZE); // TODO 에러 시에도 write 로 넘겨서 처리하도록 해야. 버퍼 낭비에 안티패턴.
+        // buf = ByteBuffer.allocate(Constants.MAIN_BUFFER_SIZE); // TODO 에러 시에도 write 로 넘겨서 처리하도록 해야. 버퍼 낭비에 안티패턴.
     }
 
     void process(SelectionKey clientKey, byte[] httpMsg) throws IOException {
@@ -30,7 +30,13 @@ class RequestProcessor {
         // TODO 200, 302, 400, 404, 500 처리
         if (status == 200) { // NOTE : Valid Http Request from client
             //TODO: if(HEAVY WORKLOAD) - Defined by requests that require IO tasks
-            fileIOThread.handle(clientKey, httpParser); // NOTE : Activate Thread Pool to process task
+            // fileIOThread.handle(clientKey, httpParser); // NOTE : Activate Thread Pool to process task
+
+            // TODO case: not file IO.
+            // clientKey.attach("Hello World\n".getBytes());
+            //
+            // clientKey.interestOps(SelectionKey.OP_WRITE);
+            // clientKey.selector().wakeup();
 
             // TODO: else - Defined by requests that don't require IO tasks
             // TODO: **NEED TO IDENTIFY WHAT IS LIGHT WORKLOAD TASK**

@@ -35,7 +35,6 @@ class RespondProcessor {
         // Entity headers
         chars.put("content-type: text/plain; charset=UTF-8\n");
         chars.put("Content-Length: " + bodyLength + "\n"); // TODO file length specify
-        chars.put("Content-Length: " + bodyLength + "\n");
         chars.put("\n");
 
         chars.flip();

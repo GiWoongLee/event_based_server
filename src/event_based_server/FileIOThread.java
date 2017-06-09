@@ -22,36 +22,45 @@ class FileIOThread {
         );
     }
 
-    private CompletionHandler<byte[], SelectionKey> callback = new CompletionHandler<byte[], SelectionKey>() {
-        @Override
-        public void completed(byte[] result, SelectionKey clientKey) {
-            clientKey.attach(result); //NOTE: send result to event queue
-
-            clientKey.interestOps(SelectionKey.OP_WRITE);
-            clientKey.selector().wakeup();
-        }
-
-        @Override
-        public void failed(Throwable exc, SelectionKey clientKey) {
-//            FIXME : null => something to notify error situation while reading file
-            clientKey.attach(null); //NOTE: send error message to event queue
-
-            clientKey.interestOps(SelectionKey.OP_WRITE);
-            clientKey.selector().wakeup();
-        }
-    };
+//     private CompletionHandler<byte[], SelectionKey> callback = new CompletionHandler<byte[], SelectionKey>() {
+//         @Override
+//         public void completed(byte[] result, SelectionKey clientKey) {
+//             clientKey.attach(result); //NOTE: send result to event queue
+//
+//             clientKey.interestOps(SelectionKey.OP_WRITE);
+//             clientKey.selector().wakeup();
+//         }
+//
+//         @Override
+//         public void failed(Throwable exc, SelectionKey clientKey) {
+// //            FIXME : null => something to notify error situation while reading file
+//             clientKey.attach(null); //NOTE: send error message to event queue
+//
+//             clientKey.interestOps(SelectionKey.OP_WRITE);
+//             clientKey.selector().wakeup();
+//         }
+//     };
 
     private Runnable loadFile(String filePath, SelectionKey clientKey) {
         return () -> {
             Path path = Paths.get("./server-root/" + filePath);
             try {
                 byte[] data = Files.readAllBytes(path);
-                callback.completed(data, clientKey);
+                clientKey.attach(data); //NOTE: send result to event queue
+
+                clientKey.interestOps(SelectionKey.OP_WRITE);
+                clientKey.selector().wakeup();
+                // callback.completed(data, clientKey);
 
                 // FIXME : When the file is bigger than the buffer, Handle it in some way with while statement
                 // while (bufferedInputStream.read(readBuffer, 0, readBuffer.length) != -1) {}
             } catch (IOException e) {
-                callback.failed(e, clientKey);
+                // callback.failed(e, clientKey);
+
+                clientKey.attach(null); //NOTE: send error message to event queue
+
+                clientKey.interestOps(SelectionKey.OP_WRITE);
+                clientKey.selector().wakeup();
             }
         };
     }

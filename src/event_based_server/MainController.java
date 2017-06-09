@@ -27,7 +27,7 @@ public class MainController implements Runnable {
         server = ServerSocketChannel.open();
         server.configureBlocking(false);
 
-        InetAddress hostIPAddress = InetAddress.getByName("localhost"); //FIXME : Fix Server Name
+        InetAddress hostIPAddress = InetAddress.getByName(Constants.HOST); //FIXME : Fix Server Name
         InetSocketAddress address = new InetSocketAddress(hostIPAddress, port);
         server.socket().bind(address);
 
@@ -37,7 +37,7 @@ public class MainController implements Runnable {
         respondProcessor = new RespondProcessor();
 
         // FIXME 버퍼 하나로 전체 다 충분?
-        buf = ByteBuffer.allocate(2048); //FIXME : Adjust buffer size with JMeter Test
+        buf = ByteBuffer.allocate(Constants.MAIN_BUFFER_SIZE); //FIXME : Adjust buffer size with JMeter Test
     }
 
     public void run() {
@@ -148,17 +148,18 @@ public class MainController implements Runnable {
             SocketChannel clientChannel = (SocketChannel) selectedChannel;
 
             ByteBuffer headerBuffer = respondProcessor.createHeaderBuffer(200);
-            headerBuffer.rewind();
+//            headerBuffer.flip();
 
-            byte[] bodyBuffer = (byte[]) key.attachment();
+            byte[] body = (byte[]) key.attachment();
 
-//            if (bodyBuffer == null) {
-//                return;
+//            if (body == null) {
+//                return; 리턴이 아니라 에러처리를 해야함. write 를 하는데 body 가 없는것도 아니고 null 이라면 앞에서 제대로 못붙여준거.
 //            }
             buf.put(headerBuffer);
-            buf.put(bodyBuffer);
+            buf.put(body);
             buf.flip();
 
+            headerBuffer.flip();
             byte[] requestMsgInBytes = new byte[headerBuffer.remaining()]; //Test : Print out Http Request Msg
             headerBuffer.get(requestMsgInBytes);
             System.out.println(new String(requestMsgInBytes));
@@ -179,7 +180,7 @@ public class MainController implements Runnable {
     }
 
     public static void main(String[] args) throws IOException {
-        MainController server = new MainController(8080);
+        MainController server = new MainController(Constants.PORT);
         new Thread(server).start();
     }
 }

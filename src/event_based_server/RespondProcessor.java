@@ -8,30 +8,36 @@ import java.nio.CharBuffer;
 import java.nio.ByteBuffer;
 import java.io.IOException;
 
-public class RespondProcessor {
-    private HttpParser httpParser;
-    private ByteBuffer headerBuffer;
-    private Charset euckr;
-    private CharsetEncoder euckrEncoder;
+class RespondProcessor {
+    private CharsetEncoder utf8Encoder;
 
-    public RespondProcessor() {
-        euckr = Charset.forName("euc-kr");
-        euckrEncoder = euckr.newEncoder();
-        httpParser = new HttpParser();
+    RespondProcessor() {
+        Charset utf8 = Charset.forName("UTF-8");
+        utf8Encoder = utf8.newEncoder();
     }
 
-    public ByteBuffer createHeaderBuffer(int status) throws CharacterCodingException {
-        CharBuffer chars = CharBuffer.allocate(1092);
+    ByteBuffer createHeaderBuffer(int status) throws CharacterCodingException {
+        CharBuffer chars = CharBuffer.allocate(Constants.MAIN_BUFFER_SIZE);
+
+        // Status
         chars.put("HTTP/1.1 "); //TODO: Refactoring following http response Format
         chars.put(HttpParser.getHttpReply(status) + "\n");
+
+        // General headers
         chars.put(HttpParser.getDateHeader() + "\n");
-        chars.put("Server: testServer\n");
-        chars.put("Content-Length: 230\n");
-        chars.put("Content-Type: text/html; charset=iso-8859-1\n");
-        chars.put("Connection: closed\n");
+        chars.put("Connection: close\n");// TODO Connection close or keep-alive. 나누기.
+
+        // Response headers
+        chars.put("Server: AsyncServerByTeam2/1.0.0\n");
+        // Accept range
+
+        // Entity headers
+        chars.put("Content-Type: text/html; charset=UTF-8\n");
+        chars.put("Content-Length: 230\n"); // TODO file length specify
         chars.put("\n");
+
         chars.flip();
-        headerBuffer = euckrEncoder.encode(chars);
-        return headerBuffer;
+
+        return utf8Encoder.encode(chars);
     }
 }

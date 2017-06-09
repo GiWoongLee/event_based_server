@@ -1,5 +1,11 @@
 package event_based_server;
 
+import java.io.*;
+import java.util.*;
+import java.text.*;
+import java.net.URLDecoder;
+
+
 /**
  * Copyright (C) 2004  Juho Vh-Herttua
  * <p>
@@ -17,14 +23,7 @@ package event_based_server;
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-
-
-import java.io.*;
-import java.util.*;
-import java.text.*;
-import java.net.URLDecoder;
-
-public class HttpParser {
+class HttpParser {
     private static final String[][] HttpReplies = {
             {"100", "Continue"},
             {"101", "Switching Protocols"},
@@ -71,14 +70,14 @@ public class HttpParser {
 
     private BufferedReader reader;
     private String method, url;
-    private Hashtable headers, params;
+    private Hashtable<String, String> headers, params;
     private int[] ver;
 
     HttpParser() {
         method = "";
         url = "";
-        headers = new Hashtable();
-        params = new Hashtable();
+        headers = new Hashtable<>();
+        params = new Hashtable<>();
         ver = new int[2];
     }
 
@@ -124,7 +123,7 @@ public class HttpParser {
                 url = URLDecoder.decode(cmd[1].substring(0, idx), "ISO-8859-1");
                 prms = cmd[1].substring(idx + 1).split("&");
 
-                params = new Hashtable();
+                params = new Hashtable<>();
                 for (i = 0; i < prms.length; i++) {
                     temp = prms[i].split("=");
                     if (temp.length == 2) {
@@ -181,37 +180,37 @@ public class HttpParser {
         }
     }
 
-    public String getMethod() {
+    String getMethod() {
         return method;
     }
 
-    public String getHeader(String key) {
+    String getHeader(String key) {
         if (headers != null)
             return (String) headers.get(key.toLowerCase());
         else return null;
     }
 
-    public Hashtable getHeaders() {
+    Hashtable getHeaders() {
         return headers;
     }
 
-    public String getRequestURL() {
+    String getRequestURL() {
         return url;
     }
 
-    public String getParam(String key) {
-        return (String) params.get(key);
+    String getParam(String key) {
+        return params.get(key);
     }
 
-    public Hashtable getParams() {
+    Hashtable getParams() {
         return params;
     }
 
-    public String getVersion() {
+    String getVersion() {
         return ver[0] + "." + ver[1];
     }
 
-    public int compareVersion(int major, int minor) {
+    int compareVersion(int major, int minor) {
         if (major < ver[0]) return -1;
         else if (major > ver[0]) return 1;
         else if (minor < ver[1]) return -1;
@@ -219,7 +218,7 @@ public class HttpParser {
         else return 0;
     }
 
-    public static String getHttpReply(int codevalue) {
+    static String getHttpReply(int codevalue) {
         String key, ret;
         int i;
 
@@ -236,7 +235,7 @@ public class HttpParser {
         return ret;
     }
 
-    public static String getDateHeader() {
+    static String getDateHeader() {
         SimpleDateFormat format;
         String ret;
 

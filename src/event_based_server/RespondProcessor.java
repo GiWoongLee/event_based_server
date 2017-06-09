@@ -20,11 +20,11 @@ public class RespondProcessor {
         httpParser = new HttpParser();
     }
 
-    public ByteBuffer createHeaderBuffer(int status) throws CharacterCodingException{
+    public ByteBuffer createHeaderBuffer(int status) throws CharacterCodingException {
         CharBuffer chars = CharBuffer.allocate(1092);
         chars.put("HTTP/1.1 "); //TODO: Refactoring following http response Format
-        chars.put(HttpParser.getHttpReply(status)+ "\n");
-        chars.put(HttpParser.getDateHeader()+ "\n");
+        chars.put(HttpParser.getHttpReply(status) + "\n");
+        chars.put(HttpParser.getDateHeader() + "\n");
         chars.put("Server: testServer\n");
         chars.put("Content-Length: 230\n");
         chars.put("Content-Type: text/html; charset=iso-8859-1\n");

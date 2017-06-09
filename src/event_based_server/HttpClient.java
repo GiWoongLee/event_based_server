@@ -16,7 +16,7 @@ public class HttpClient {
     public static void main(String[] args) throws Exception {
         HttpClient httpClient = new HttpClient();
 
-        while(true){
+        while (true) {
             System.out.println("Testing 1 - Send Http GET request");
             httpClient.sendGet();
         }
@@ -24,7 +24,7 @@ public class HttpClient {
 //        httpClient.sendPost();
     }
 
-    private void sendGet() throws Exception{
+    private void sendGet() throws Exception {
         String url = "http://127.0.0.1:8080/src/event_based_server/sample.txt";
 
         URL serverURL = new URL(url);
@@ -32,11 +32,11 @@ public class HttpClient {
 
         connection.setRequestMethod("GET");
 
-        connection.setRequestProperty("User-Agent",USER_AGENT);
+        connection.setRequestProperty("User-Agent", USER_AGENT);
 
         int responseCode = connection.getResponseCode();
         System.out.println("\nSending 'GET' request to URL => " + url);
-        System.out.println("Response Code :" + responseCode +"\n");
+        System.out.println("Response Code :" + responseCode + "\n");
 
         BufferedReader input = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         String inputLine;
@@ -52,7 +52,7 @@ public class HttpClient {
 
     }
 
-    private void sendPost() throws Exception{
+    private void sendPost() throws Exception {
         String url = "http://127.0.0.1:8080/src/event_based_server/sample.txt";
         URL obj = new URL(url);
         HttpsURLConnection con = (HttpsURLConnection) obj.openConnection();

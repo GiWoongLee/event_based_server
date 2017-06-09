@@ -17,11 +17,11 @@ public class MainController implements Runnable {
     private ServerSocketChannel server;
 
     private RequestProcessor requestProcessor;
-	private RespondProcessor respondProcessor;
+    private RespondProcessor respondProcessor;
 
-	private ByteBuffer buf;
-	
-	private MainController(int port) throws IOException{
+    private ByteBuffer buf;
+
+    private MainController(int port) throws IOException {
         selector = Selector.open();
 
         server = ServerSocketChannel.open();
@@ -38,21 +38,21 @@ public class MainController implements Runnable {
 
         // FIXME 버퍼 하나로 전체 다 충분?
         buf = ByteBuffer.allocate(2048); //FIXME : Adjust buffer size with JMeter Test
-	}
+    }
 
-	public void run() {
-		try{
+    public void run() {
+        try {
             System.out.println("Server Started"); // Test: Message
             System.out.println("****************************");
             System.out.println("Waiting For Client Connection");
             System.out.println("****************************");
-            while(!Thread.interrupted()) {
-				int readyKeys = selector.select();
+            while (!Thread.interrupted()) {
+                int readyKeys = selector.select();
 
-				if (readyKeys > 0) {
-				    Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
+                if (readyKeys > 0) {
+                    Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
 
-					while(iter.hasNext()) {
+                    while (iter.hasNext()) {
 //					    NOTE: PROPOSAL. accept, read, write 를 별도의 스레드로 처리하여 병렬 처리 가능. 성능향상 기대.
 //                        Set selected = selector.selectedKeys();
 //                        Iterator itr = selected.iterator();
@@ -60,32 +60,32 @@ public class MainController implements Runnable {
 //                            dispatch((SelectionKey)(itr.next()); //starts separate threads
 //                        selected.clear(); //clear the keys from the set since they are already processed
 
-						SelectionKey key = iter.next();
+                        SelectionKey key = iter.next();
                         iter.remove();
 
-						SelectableChannel selectedChannel = key.channel();
+                        SelectableChannel selectedChannel = key.channel();
 
-						if (key.isAcceptable()) {
+                        if (key.isAcceptable()) {
                             acceptor(selectedChannel);
                         } else if (key.isReadable()) {
                             reader(selectedChannel, key);
                         } else if (key.isWritable()) {
                             writer(selectedChannel, key);
                         }
-					}
-				}
-			}
-		} catch(IOException e){
-			e.printStackTrace();
-		} finally{
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
             // FIXME user 가 접속을 차단했을 때 에러에 의해 서버가 종료되는 문제 발생. exception handling 수정 필요.
-			try{
-				server.close();
-			} catch(IOException e){
-				e.printStackTrace();
-			}
-		}
-	}
+            try {
+                server.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     private void acceptor(SelectableChannel selectedChannel) {
         try {
@@ -93,7 +93,7 @@ public class MainController implements Runnable {
 
             SocketChannel clientChannel = serverChannel.accept(); //Connect Request from Client to Server
 
-            if(clientChannel == null) {
+            if (clientChannel == null) {
                 System.out.println("Null server socket.");
                 return;
             }
@@ -112,7 +112,7 @@ public class MainController implements Runnable {
 
     private void reader(SelectableChannel selectedChannel, SelectionKey key) {
         try {
-            SocketChannel clientChannel =  (SocketChannel) selectedChannel;
+            SocketChannel clientChannel = (SocketChannel) selectedChannel;
 
             int bytesCount = clientChannel.read(buf); // from client channel, read request msg and write into buffer
 
@@ -145,12 +145,12 @@ public class MainController implements Runnable {
     private void writer(SelectableChannel selectedChannel, SelectionKey key) {
         // TODO(REFACTORING): Buffer and related info
         try {
-            SocketChannel clientChannel =  (SocketChannel) selectedChannel;
+            SocketChannel clientChannel = (SocketChannel) selectedChannel;
 
             ByteBuffer headerBuffer = respondProcessor.createHeaderBuffer(200);
             headerBuffer.rewind();
 
-            byte[] bodyBuffer  = (byte[]) key.attachment();
+            byte[] bodyBuffer = (byte[]) key.attachment();
 
 //            if (bodyBuffer == null) {
 //                return;

@@ -29,14 +29,14 @@ public class RequestProcessor {
 
         if (status == 200) { //NOTE : Valid Http Request from client
             //TODO: if(HEAVY WORKLOAD) - Defined by requests that require IO tasks
-            fileIOThread.handle(clientKey,httpParser); // NOTE : Activate Thread Pool to process task
+            fileIOThread.handle(clientKey, httpParser); // NOTE : Activate Thread Pool to process task
 
             //TODO: else - Defined by requests that don't require IO tasks
             //TODO: **NEED TO IDENTIFY WHAT IS LIGHT WORKLOAD TASK**
             //TODO: current thread process the task
         } else {
             buf = respondProcessor.createHeaderBuffer(status); //NOTE: Buffer Size Need to be same as the buffer used in RespondProcessor
-            SocketChannel clientChannel = (SocketChannel)clientKey.channel();
+            SocketChannel clientChannel = (SocketChannel) clientKey.channel();
             clientChannel.write(buf);
             buf.clear();
         }

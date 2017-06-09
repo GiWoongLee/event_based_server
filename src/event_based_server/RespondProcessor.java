@@ -16,7 +16,7 @@ class RespondProcessor {
         utf8Encoder = utf8.newEncoder();
     }
 
-    ByteBuffer createHeaderBuffer(int status) throws CharacterCodingException {
+    ByteBuffer createHeaderBuffer(int status, int bodyLength) throws CharacterCodingException {
         CharBuffer chars = CharBuffer.allocate(Constants.MAIN_BUFFER_SIZE);
 
         // Status
@@ -25,15 +25,18 @@ class RespondProcessor {
 
         // General headers
         chars.put(HttpParser.getDateHeader() + "\n");
-        chars.put("Connection: close\n");// TODO Connection close or keep-alive. 나누기.
+        chars.put("connection: close\n");// TODO Connection close or keep-alive. 나누기.
+        chars.put("cache-control: private, max-age=0");
 
         // Response headers
-        chars.put("Server: AsyncServerByTeam2/1.0.0\n");
+        chars.put("server: AsyncServerByTeam2/1.0.0\n");
         // Accept range
 
         // Entity headers
-        chars.put("Content-Type: text/html; charset=UTF-8\n");
-        chars.put("Content-Length: 230\n"); // TODO file length specify
+        chars.put("content-type: text/txt; charset=UTF-8\n");
+        chars.put("Content-Length: " + bodyLength + "\n"); // TODO file length specify
+        chars.put("Content-Length: " + bodyLength + "\n");
+//        ByteBuffer a = utf8Encoder.encode(chars);
         chars.put("\n");
 
         chars.flip();

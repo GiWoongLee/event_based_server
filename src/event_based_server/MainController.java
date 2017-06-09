@@ -128,13 +128,14 @@ public class MainController implements Runnable {
                 requestProcessor.process(key, requestMsgInBytes); // NOTE : Main Function to process http request
             } else {
                 // TODO 여기서 하지말고 write 로 넘겨줘서 처리하기.
-                key.cancel();
-                clientChannel.close();
                 System.out.println("read(): client connection might have been dropped!");
 
                 int status = 400;
-                buf = respondProcessor.createHeaderBuffer(status); //NOTE: Buffer Size Need to be same as the buffer used in RespondProcessor
+                buf = respondProcessor.createHeaderBuffer(status, 0); //NOTE: Buffer Size Need to be same as the buffer used in RespondProcessor
                 clientChannel.write(buf);
+
+                key.cancel();
+                clientChannel.close();
                 buf.clear();
             }
         } catch (IOException ex) {
@@ -147,33 +148,37 @@ public class MainController implements Runnable {
         try {
             SocketChannel clientChannel = (SocketChannel) selectedChannel;
 
-            ByteBuffer headerBuffer = respondProcessor.createHeaderBuffer(200);
+            byte[] body = (byte[]) key.attachment();
+            ByteBuffer headerBuffer = respondProcessor.createHeaderBuffer(200, body.length);
 //            headerBuffer.flip();
 
-            byte[] body = (byte[]) key.attachment();
 
 //            if (body == null) {
 //                return; 리턴이 아니라 에러처리를 해야함. write 를 하는데 body 가 없는것도 아니고 null 이라면 앞에서 제대로 못붙여준거.
 //            }
             buf.put(headerBuffer);
-            buf.put(body);
+            buf.put(ByteBuffer.wrap(body));
             buf.flip();
 
-            headerBuffer.flip();
-            byte[] requestMsgInBytes = new byte[headerBuffer.remaining()]; //Test : Print out Http Request Msg
-            headerBuffer.get(requestMsgInBytes);
+//            headerBuffer.flip();
+            byte[] requestMsgInBytes = new byte[buf.remaining()]; //Test : Print out Http Request Msg
+            buf.get(requestMsgInBytes);
             System.out.println(new String(requestMsgInBytes));
+            buf.flip();
 
-            clientChannel.write(buf);
+            while(buf.hasRemaining()) {
+                clientChannel.write(buf);
+            }
 
+//            if (numBytes > 0) {
             buf.clear();
-//            key.attach(null);
             // write  이후 interestOp 가 read 로 바뀌지 않아서 write 무한 루프 이슈. 해결.
-            // Set the key's interest-set back to READ operation
-//            key.interestOps(SelectionKey.OP_READ);
-            key.selector().wakeup();
             // TODO connection 헤더에 따라 분리.
             clientChannel.close();
+            key.selector().wakeup();
+//            }
+
+
         } catch (IOException ex) {
             ex.printStackTrace();
         }

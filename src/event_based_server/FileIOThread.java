@@ -59,41 +59,41 @@ public class FileIOThread {
         return task;
     }
 
-    private Runnable newFile(ByteBuffer bodyContent, String filePath, SelectionKey clientKey) {
-        Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                FileOutputStream outputStream = null;
-                BufferedOutputStream bufferedOutputStream = null;
-                byte[] readBuffer = new byte[1024];
+//    private Runnable newFile(ByteBuffer bodyContent, String filePath, SelectionKey clientKey) {
+//        Runnable task = new Runnable() {
+//            @Override
+//            public void run() {
+//                FileOutputStream outputStream = null;
+//                BufferedOutputStream bufferedOutputStream = null;
+//                byte[] readBuffer = new byte[1024];
+//
+//                try {
+//                    outputStream = new FileOutputStream(filePath);
+//                    bufferedOutputStream = new BufferedOutputStream(outputStream);
+//
+//                    //TODO: following body info from http post request, store it as a file
+//                    //STEP1 : bodyContent -> readBuffer
+//                    //STEP2 : readBuffer -> bodyContent
+//                    //FIXME: When the file is bigger than the buffer, Handle it in some way with while statement
+//                    bufferedOutputStream.write(readBuffer);
+//
+//                    callback.completed(readBuffer, clientKey); //FIXME: change result from readBuffer to void or something
+//
+//                } catch (Exception e) {
+//                    callback.failed(e, clientKey);
+//                } finally {
+//                    try {
+//                        bufferedOutputStream.close();
+//                    } catch (Exception e) {
+//                        callback.failed(e, clientKey);
+//                    }
+//                }
+//            }
+//        };
+//        return task;
+//    }
 
-                try {
-                    outputStream = new FileOutputStream(filePath);
-                    bufferedOutputStream = new BufferedOutputStream(outputStream);
-
-                    //TODO: following body info from http post request, store it as a file
-                    //STEP1 : bodyContent -> readBuffer
-                    //STEP2 : readBuffer -> bodyContent
-                    //FIXME: When the file is bigger than the buffer, Handle it in some way with while statement
-                    bufferedOutputStream.write(readBuffer);
-
-                    callback.completed(readBuffer, clientKey); //FIXME: change result from readBuffer to void or something
-
-                } catch (Exception e) {
-                    callback.failed(e, clientKey);
-                } finally {
-                    try {
-                        bufferedOutputStream.close();
-                    } catch (Exception e) {
-                        callback.failed(e, clientKey);
-                    }
-                }
-            }
-        };
-        return task;
-    }
-
-    public void handle(SelectionKey clientKey, HttpParser httpParser) {
+    void handle(SelectionKey clientKey, HttpParser httpParser) {
         //TODO : Following http request info, execute different task with thread pool
         String filePath = httpParser.getRequestURL().substring(1); //FIXME: Parse Directory info and store new file into proper directory
 //            FIXME: true => GET // false => POST

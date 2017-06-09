@@ -186,7 +186,7 @@ class HttpParser {
 
     String getHeader(String key) {
         if (headers != null)
-            return (String) headers.get(key.toLowerCase());
+            return headers.get(key.toLowerCase());
         else return null;
     }
 

@@ -53,12 +53,12 @@ public class MainController implements Runnable {
                     Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
 
                     while (iter.hasNext()) {
-//					    NOTE: PROPOSAL. accept, read, write 를 별도의 스레드로 처리하여 병렬 처리 가능. 성능향상 기대.
-//                        Set selected = selector.selectedKeys();
-//                        Iterator itr = selected.iterator();
-//                        while (itr.hasNext())
-//                            dispatch((SelectionKey)(itr.next()); //starts separate threads
-//                        selected.clear(); //clear the keys from the set since they are already processed
+                        // NOTE: PROPOSAL. accept, read, write 를 별도의 스레드로 처리하여 병렬 처리 가능. 성능향상 기대.
+                        // Set selected = selector.selectedKeys();
+                        // Iterator itr = selected.iterator();
+                        // while (itr.hasNext())
+                        // dispatch((SelectionKey)(itr.next()); //starts separate threads
+                        // selected.clear(); //clear the keys from the set since they are already processed
 
                         SelectionKey key = iter.next();
                         iter.remove();
@@ -150,33 +150,33 @@ public class MainController implements Runnable {
 
             byte[] body = (byte[]) key.attachment();
             ByteBuffer headerBuffer = respondProcessor.createHeaderBuffer(200, body.length);
-//            headerBuffer.flip();
+            // headerBuffer.flip();
 
 
-//            if (body == null) {
-//                return; 리턴이 아니라 에러처리를 해야함. write 를 하는데 body 가 없는것도 아니고 null 이라면 앞에서 제대로 못붙여준거.
-//            }
+            // if (body == null) {
+            //     return; 리턴이 아니라 에러처리를 해야함. write 를 하는데 body 가 없는것도 아니고 null 이라면 앞에서 제대로 못붙여준거.
+            // }
             buf.put(headerBuffer);
             buf.put(ByteBuffer.wrap(body));
             buf.flip();
 
-//            headerBuffer.flip();
+            // headerBuffer.flip();
             byte[] requestMsgInBytes = new byte[buf.remaining()]; //Test : Print out Http Request Msg
             buf.get(requestMsgInBytes);
             System.out.println(new String(requestMsgInBytes));
             buf.flip();
 
-            while(buf.hasRemaining()) {
+            while (buf.hasRemaining()) {
                 clientChannel.write(buf);
             }
 
-//            if (numBytes > 0) {
+            // if (numBytes > 0) {
             buf.clear();
             // write  이후 interestOp 가 read 로 바뀌지 않아서 write 무한 루프 이슈. 해결.
             // TODO connection 헤더에 따라 분리.
             clientChannel.close();
             key.selector().wakeup();
-//            }
+            // }
 
 
         } catch (IOException ex) {

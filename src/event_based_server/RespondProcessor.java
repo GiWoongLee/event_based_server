@@ -33,10 +33,9 @@ class RespondProcessor {
         // Accept range
 
         // Entity headers
-        chars.put("content-type: text/txt; charset=UTF-8\n");
+        chars.put("content-type: text/plain; charset=UTF-8\n");
         chars.put("Content-Length: " + bodyLength + "\n"); // TODO file length specify
         chars.put("Content-Length: " + bodyLength + "\n");
-//        ByteBuffer a = utf8Encoder.encode(chars);
         chars.put("\n");
 
         chars.flip();

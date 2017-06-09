@@ -19,27 +19,27 @@ class RequestProcessor {
     }
 
     void process(SelectionKey clientKey, byte[] httpMsg) throws IOException {
-        int status = httpParser.parseRequest(httpMsg); //NOTE : parse http request and get the result of parsing
+        int status = httpParser.parseRequest(httpMsg); // NOTE : parse http request and get the result of parsing
 
-        System.out.println(httpParser.getMethod());  //Test : Print out httpParsed Info
+        System.out.println(httpParser.getMethod()); // Test : Print out httpParsed Info
         System.out.println(httpParser.getRequestURL());
         System.out.println(httpParser.getVersion());
         System.out.println(httpParser.getHeaders());
         System.out.println(httpParser.getParams());
 
         // TODO 200, 302, 400, 404, 500 처리
-        if (status == 200) { //NOTE : Valid Http Request from client
+        if (status == 200) { // NOTE : Valid Http Request from client
             //TODO: if(HEAVY WORKLOAD) - Defined by requests that require IO tasks
             fileIOThread.handle(clientKey, httpParser); // NOTE : Activate Thread Pool to process task
 
-            //TODO: else - Defined by requests that don't require IO tasks
-            //TODO: **NEED TO IDENTIFY WHAT IS LIGHT WORKLOAD TASK**
-            //TODO: current thread process the task
+            // TODO: else - Defined by requests that don't require IO tasks
+            // TODO: **NEED TO IDENTIFY WHAT IS LIGHT WORKLOAD TASK**
+            // TODO: current thread process the task
         } else {
-            buf = respondProcessor.createHeaderBuffer(status, 0); //NOTE: Buffer Size Need to be same as the buffer used in RespondProcessor
+            buf = respondProcessor.createHeaderBuffer(status, 0); // NOTE: Buffer Size Need to be same as the buffer used in RespondProcessor
             SocketChannel clientChannel = (SocketChannel) clientKey.channel();
             clientChannel.write(buf);
-//            TODO channel close
+            // TODO channel close
             buf.clear();
         }
 

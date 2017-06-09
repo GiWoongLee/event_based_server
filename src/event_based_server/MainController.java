@@ -47,7 +47,7 @@ public class MainController implements Runnable {
             System.out.println("Waiting For Client Connection");
             System.out.println("****************************");
             while (!Thread.interrupted()) {
-                int readyKeys = selector.select();
+                int readyKeys = selector.select(Constants.PERIODIC_SELECT);
 
                 if (readyKeys > 0) {
                     Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
@@ -103,7 +103,7 @@ public class MainController implements Runnable {
             System.out.println("#socket accepted. Incoming connection from: " + clientChannel); // Test : server accepting new connection from new client
 
             clientChannel.register(selector, SelectionKey.OP_READ); //Register Client to Selector
-            // TODO attach
+            // TODO attach: requestStartTime
             selector.wakeup();
         } catch (IOException ex) {
             ex.printStackTrace();

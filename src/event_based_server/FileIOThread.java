@@ -13,50 +13,58 @@ import java.nio.file.Path;
 
 
 class FileIOThread {
-
     private ExecutorService executorService;
+    private InMemoryCache<String, byte[]> cache;
 
     FileIOThread() {
         executorService = Executors.newFixedThreadPool(
-                Runtime.getRuntime().availableProcessors()
+                Constants.THREAD_POOL_SIZE
         );
+        cache = new InMemoryCache<>(200, 500, 6);
     }
 
-//     private CompletionHandler<byte[], SelectionKey> callback = new CompletionHandler<byte[], SelectionKey>() {
-//         @Override
-//         public void completed(byte[] result, SelectionKey clientKey) {
-//             clientKey.attach(result); //NOTE: send result to event queue
-//
-//             clientKey.interestOps(SelectionKey.OP_WRITE);
-//             clientKey.selector().wakeup();
-//         }
-//
-//         @Override
-//         public void failed(Throwable exc, SelectionKey clientKey) {
-// //            FIXME : null => something to notify error situation while reading file
-//             clientKey.attach(null); //NOTE: send error message to event queue
-//
-//             clientKey.interestOps(SelectionKey.OP_WRITE);
-//             clientKey.selector().wakeup();
-//         }
-//     };
+    // private CompletionHandler<byte[], SelectionKey> callback = new CompletionHandler<byte[], SelectionKey>() {
+    //     @Override
+    //     public void completed(byte[] result, SelectionKey clientKey) {
+    //         clientKey.attach(result); //NOTE: send result to event queue
+    //
+    //         clientKey.interestOps(SelectionKey.OP_WRITE);
+    //         clientKey.selector().wakeup();
+    //     }
+    //
+    //     @Override
+    //     public void failed(Throwable exc, SelectionKey clientKey) {
+    //     // FIXME : null => something to notify error situation while reading file
+    //         clientKey.attach(null); //NOTE: send error message to event queue
+    //
+    //         clientKey.interestOps(SelectionKey.OP_WRITE);
+    //         clientKey.selector().wakeup();
+    //     }
+    // };
 
     private Runnable loadFile(String filePath, SelectionKey clientKey) {
         return () -> {
             Path path = Paths.get("./server-root/" + filePath);
             try {
-                byte[] data = Files.readAllBytes(path);
+                byte[] data;
+                byte[] cachedData = cache.get(filePath);
+
+                if (cachedData != null) {
+                    System.out.println("CachedData exists!");
+                    data = cachedData;
+                } else {
+                    data = Files.readAllBytes(path);
+                    cache.put(filePath, data);
+                }
+
                 clientKey.attach(data); //NOTE: send result to event queue
 
                 clientKey.interestOps(SelectionKey.OP_WRITE);
                 clientKey.selector().wakeup();
-                // callback.completed(data, clientKey);
 
                 // FIXME : When the file is bigger than the buffer, Handle it in some way with while statement
                 // while (bufferedInputStream.read(readBuffer, 0, readBuffer.length) != -1) {}
             } catch (IOException e) {
-                // callback.failed(e, clientKey);
-
                 clientKey.attach(null); //NOTE: send error message to event queue
 
                 clientKey.interestOps(SelectionKey.OP_WRITE);

@@ -36,11 +36,10 @@ class RequestProcessor {
             // TODO: **NEED TO IDENTIFY WHAT IS LIGHT WORKLOAD TASK**
             // TODO: current thread process the task
         } else {
-            buf = respondProcessor.createHeaderBuffer(status, 0); // NOTE: Buffer Size Need to be same as the buffer used in RespondProcessor
-            SocketChannel clientChannel = (SocketChannel) clientKey.channel();
-            clientChannel.write(buf);
-            // TODO channel close
-            buf.clear();
+            clientKey.attach(null); //NOTE: send error message to event queue
+
+            clientKey.interestOps(SelectionKey.OP_WRITE);
+            clientKey.selector().wakeup();
         }
 
     }

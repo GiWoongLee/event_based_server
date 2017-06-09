@@ -121,7 +121,6 @@ public class MainController implements Runnable {
 
                 byte[] requestMsgInBytes = new byte[buf.remaining()]; // NOTE(REFACTORING) : Process ByteBuffer into String to parse as a Http Msg
                 buf.get(requestMsgInBytes); // Without this process, buf returns string not considering empty arrays
-
                 System.out.println(new String(requestMsgInBytes)); //Test : Print out Http Request Msg
                 buf.clear(); //clear away old info
 
@@ -130,13 +129,10 @@ public class MainController implements Runnable {
                 // TODO 여기서 하지말고 write 로 넘겨줘서 처리하기.
                 System.out.println("read(): client connection might have been dropped!");
 
-                int status = 400;
-                buf = respondProcessor.createHeaderBuffer(status, 0); //NOTE: Buffer Size Need to be same as the buffer used in RespondProcessor
-                clientChannel.write(buf);
+                key.attach(null); //NOTE: send error message to event queue
 
-                key.cancel();
-                clientChannel.close();
-                buf.clear();
+                key.interestOps(SelectionKey.OP_WRITE);
+                key.selector().wakeup();
             }
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -147,20 +143,22 @@ public class MainController implements Runnable {
         // TODO(REFACTORING): Buffer and related info
         try {
             SocketChannel clientChannel = (SocketChannel) selectedChannel;
+            byte[] body;
+            ByteBuffer headerBuffer;
 
-            byte[] body = (byte[]) key.attachment();
-            ByteBuffer headerBuffer = respondProcessor.createHeaderBuffer(200, body.length);
-            // headerBuffer.flip();
+            // TODO 장기적으로 attachment 를 클래스로 관리해서 status 등 여러 정보를 받아와야 함.
+            if (key.attachment() != null) {
+                body = (byte[]) key.attachment();
+                headerBuffer = respondProcessor.createHeaderBuffer(200, body.length);
+            } else {
+                body = (byte[]) key.attachment();
+                headerBuffer = respondProcessor.createHeaderBuffer(400, body.length);
+            }
 
-
-            // if (body == null) {
-            //     return; 리턴이 아니라 에러처리를 해야함. write 를 하는데 body 가 없는것도 아니고 null 이라면 앞에서 제대로 못붙여준거.
-            // }
             buf.put(headerBuffer);
             buf.put(ByteBuffer.wrap(body));
             buf.flip();
 
-            // headerBuffer.flip();
             byte[] requestMsgInBytes = new byte[buf.remaining()]; //Test : Print out Http Request Msg
             buf.get(requestMsgInBytes);
             System.out.println(new String(requestMsgInBytes));
@@ -170,15 +168,13 @@ public class MainController implements Runnable {
                 clientChannel.write(buf);
             }
 
-            // if (numBytes > 0) {
             buf.clear();
-            // write  이후 interestOp 가 read 로 바뀌지 않아서 write 무한 루프 이슈. 해결.
             // TODO connection 헤더에 따라 분리.
+            // keepalive 이면 interestOp read.
+            // close 이면 sc.close()
             clientChannel.close();
             key.selector().wakeup();
-            // }
-
-
+            // TODO key.cancel() 필요하나?
         } catch (IOException ex) {
             ex.printStackTrace();
         }

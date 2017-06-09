@@ -8,4 +8,5 @@ class Constants {
     static final String HOST = "localhost";
     static final int MAIN_BUFFER_SIZE = 2048;
     static final int PERIODIC_SELECT = 300;
+    static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
 }

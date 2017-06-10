@@ -113,6 +113,7 @@ public class MainController implements Runnable {
 							    else {
 							    	ByteBuffer headerBuffer = respondProcessor.createHeaderBuffer(200);
 							    	headerBuffer.rewind();
+							    	//TODO: Copy result into buffer and send result to client && consecutively clear buffer to send rest of the result
 							    	buf.put(headerBuffer);
 							    	buf.put(res);
 							    	buf.flip();

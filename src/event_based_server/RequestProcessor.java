@@ -33,10 +33,10 @@ class RequestProcessor {
             // fileIOThread.handle(clientKey, httpParser); // NOTE : Activate Thread Pool to process task
 
             // TODO case: not file IO.
-            // clientKey.attach("Hello World\n".getBytes());
-            //
-            // clientKey.interestOps(SelectionKey.OP_WRITE);
-            // clientKey.selector().wakeup();
+            clientKey.attach("Hello World\n".getBytes());
+
+            clientKey.interestOps(SelectionKey.OP_WRITE);
+            clientKey.selector().wakeup();
 
             // TODO: else - Defined by requests that don't require IO tasks
             // TODO: **NEED TO IDENTIFY WHAT IS LIGHT WORKLOAD TASK**

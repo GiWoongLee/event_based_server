@@ -151,13 +151,13 @@ public class MainController implements Runnable {
             if (key.attachment() != null) {
                 body = (byte[]) key.attachment();
                 headerBuffer = respondProcessor.createHeaderBuffer(200, body.length);
+                buf.put(headerBuffer);
+                buf.put(ByteBuffer.wrap(body));
             } else {
-                body = (byte[]) key.attachment();
-                headerBuffer = respondProcessor.createHeaderBuffer(400, body.length);
+                headerBuffer = respondProcessor.createHeaderBuffer(400, 0);
+                buf.put(headerBuffer);
             }
 
-            buf.put(headerBuffer);
-            buf.put(ByteBuffer.wrap(body));
             buf.flip();
 
             System.out.println("#channel writing. Buffer as below: ");

@@ -13,4 +13,5 @@ class Constants {
     static final int CACHE_TIMER_INTERVAL = 500;
     static final int CACHE_MAX_ITEMS = 100;
     static final long CACHE_BYTE_SIZE = 100 * 1024 * 1024; // 100M
+    static final int REQUEST_TIMEOUT_MILLIS = 30 * 1000;
 }

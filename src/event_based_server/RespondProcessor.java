@@ -4,21 +4,16 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
 
 class RespondProcessor {
-    private CharsetEncoder utf8Encoder;
-
     RespondProcessor() {
-        Charset utf8 = Charset.forName("UTF-8");
-        utf8Encoder = utf8.newEncoder();
     }
 
-    ByteBuffer createHeaderBuffer(int status, int bodyLength) throws CharacterCodingException {
+    static ByteBuffer createHeaderBuffer(int status, int bodyLength) throws CharacterCodingException {
         CharBuffer chars = CharBuffer.allocate(Constants.MAIN_BUFFER_SIZE);
 
         // Status
-        chars.put("HTTP/1.1 "); //TODO: Refactoring following http response Format
+        chars.put("HTTP/1.1 "); // TODO: Refactoring following http response Format
         chars.put(HttpParser.getHttpReply(status) + "\n");
 
         // General headers
@@ -32,11 +27,11 @@ class RespondProcessor {
 
         // Entity headers
         chars.put("content-type: text/plain; charset=UTF-8\n");
-        chars.put("Content-Length: " + bodyLength + "\n"); // TODO file length specify
+        chars.put("Content-Length: " + bodyLength + "\n");
         chars.put("\n");
 
         chars.flip();
 
-        return utf8Encoder.encode(chars);
+        return Charset.forName("UTF-8").encode(chars);
     }
 }

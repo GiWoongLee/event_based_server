@@ -27,7 +27,7 @@ public class MainController implements Runnable {
 
         InetAddress hostIPAddress = InetAddress.getByName(Constants.HOST);
         InetSocketAddress address = new InetSocketAddress(hostIPAddress, port);
-        server.socket().bind(address);
+        server.socket().bind(address, 300);
 
         server.register(selector, SelectionKey.OP_ACCEPT); //NOTE: register ssc into selector
 
@@ -48,8 +48,8 @@ public class MainController implements Runnable {
             System.out.println("Waiting For Client Connection");
             System.out.println("****************************");
             while (!Thread.interrupted()) {
-                // int readyKeys = selector.select(Constants.PERIODIC_SELECT);
-                int readyKeys = selector.select();
+                int readyKeys = selector.select(Constants.PERIODIC_SELECT);
+                // int readyKeys = selector.select();
 
                 if (readyKeys > 0) {
                     Iterator<SelectionKey> iter = selector.selectedKeys().iterator();

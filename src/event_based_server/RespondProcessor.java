@@ -1,12 +1,10 @@
 package event_based_server;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharacterCodingException;
-import java.nio.CharBuffer;
-import java.nio.ByteBuffer;
-import java.io.IOException;
 
 class RespondProcessor {
     private CharsetEncoder utf8Encoder;

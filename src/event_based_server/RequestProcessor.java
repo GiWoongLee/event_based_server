@@ -2,8 +2,6 @@ package event_based_server;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
-// import java.nio.channels.SocketChannel;
-// import java.nio.ByteBuffer;
 
 class RequestProcessor {
     // private RespondProcessor respondProcessor; // FIXME for write
@@ -30,13 +28,13 @@ class RequestProcessor {
         // TODO 200, 302, 400, 404, 500 처리
         if (status == 200) { // NOTE : Valid Http Request from client
             //TODO: if(HEAVY WORKLOAD) - Defined by requests that require IO tasks
-            // fileIOThread.handle(clientKey, httpParser); // NOTE : Activate Thread Pool to process task
+            fileIOThread.handle(clientKey, httpParser); // NOTE : Activate Thread Pool to process task
 
             // TODO case: not file IO.
-            clientKey.attach("Hello World\n".getBytes());
-
-            clientKey.interestOps(SelectionKey.OP_WRITE);
-            clientKey.selector().wakeup();
+            // clientKey.attach("Hello World\n".getBytes());
+            //
+            // clientKey.interestOps(SelectionKey.OP_WRITE);
+            // clientKey.selector().wakeup();
 
             // TODO: else - Defined by requests that don't require IO tasks
             // TODO: **NEED TO IDENTIFY WHAT IS LIGHT WORKLOAD TASK**

@@ -3,12 +3,8 @@ package event_based_server;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.Selector;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 import java.nio.ByteBuffer;
+import java.nio.channels.*;
 import java.util.Iterator;
 
 public class MainController implements Runnable {
@@ -154,6 +150,7 @@ public class MainController implements Runnable {
                 buf.put(headerBuffer);
                 buf.put(ByteBuffer.wrap(body));
             } else {
+                body = (byte[]) key.attachment();
                 headerBuffer = respondProcessor.createHeaderBuffer(400, 0);
                 buf.put(headerBuffer);
             }

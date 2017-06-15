@@ -4,6 +4,7 @@ import org.apache.commons.collections4.MapIterator;
 import org.apache.commons.collections4.map.LRUMap;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * Created by soo on 2017. 6. 10..
@@ -26,6 +27,7 @@ class InMemoryCache<K> {
     InMemoryCache(long timeToLive, final long timerInterval, int maxItems, long maxByteSize) {
         this.timeToLive = timeToLive * 1000;
         this.cacheMap = new LRUMap<>(maxItems);
+        Collections.synchronizedMap(this.cacheMap);
         this.maxByteSize = maxByteSize;
         this.currentByteSize = 0;
 

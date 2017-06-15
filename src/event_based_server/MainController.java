@@ -27,7 +27,7 @@ public class MainController implements Runnable {
 
         InetAddress hostIPAddress = InetAddress.getByName(Constants.HOST);
         InetSocketAddress address = new InetSocketAddress(hostIPAddress, port);
-        server.socket().bind(address, 300);
+        server.socket().bind(address, 150);
 
         server.register(selector, SelectionKey.OP_ACCEPT); //NOTE: register ssc into selector
 
@@ -114,7 +114,7 @@ public class MainController implements Runnable {
             clientChannel.configureBlocking(false); //Change socketChannel from Blocking(default) to Non-Blocking State
             clientChannel.socket().setKeepAlive(true);
 
-            // System.out.println("#socket accepted. Incoming connection from: " + clientChannel); // Test : server accepting new connection from new client
+            System.out.println("#socket accepted. Incoming connection from: " + clientChannel); // Test : server accepting new connection from new client
 
             clientChannel.register(selector, SelectionKey.OP_READ); //Register Client to Selector
             selector.wakeup();
@@ -127,32 +127,53 @@ public class MainController implements Runnable {
         try {
             SocketChannel clientChannel = (SocketChannel) selectedChannel;
 
-            // if (key.attachment() != null) {
             Request request = new Request();
             request.setState(Request.READ);
-            // }
 
             int bytesCount = clientChannel.read(readBuf); // from client channel, read request msg and write into buffer
 
-            if (bytesCount > 0) {
-                readBuf.flip(); //make buffer ready to read
+            readBuf.flip();
 
-                System.out.println("#channel reading. Buffer as below: ");
-                byte[] requestMsgInBytes = new byte[readBuf.remaining()]; // NOTE(REFACTORING) : Process ByteBuffer into String to parse as a Http Msg
-                readBuf.get(requestMsgInBytes); // Without this process, buf returns string not considering empty arrays
-                System.out.println(new String(requestMsgInBytes)); //Test : Print out Http Request Msg
-                readBuf.clear(); //clear away old info
+            System.out.println("#channel reading. Buffer as below: ");
+            byte[] requestMsgInBytes = new byte[readBuf.remaining()]; // NOTE(REFACTORING) : Process ByteBuffer into String to parse as a Http Msg
+            readBuf.get(requestMsgInBytes); // Without this process, buf returns string not considering empty arrays
+            System.out.println(new String(requestMsgInBytes)); //Test : Print out Http Request Msg
 
-                requestProcessor.process(key, requestMsgInBytes, request); // NOTE : Main Function to process http request
-            } else {
-                System.out.println("read(): client connection might have been dropped!");
+            // readBuf.flip(); //make buffer ready to read
+            readBuf.clear();
+
+            HttpParser httpParser = new HttpParser();
+            int status = httpParser.parseRequest(requestMsgInBytes); // NOTE : parse http request and get the result of parsing
+
+            request.setHttpParser(httpParser);
+
+            if (Constants.MAIN_BUFFER_SIZE == bytesCount) {
+                System.out.println("read(): too long request");
 
                 request.setState(Request.ERROR);
-                request.setResponseHeader(ResponseProcessor.createHeaderBuffer(500));
+                request.setResponseHeader(ResponseProcessor.createHeaderBuffer(400));
                 key.attach(request); //NOTE: send error message to event queue
 
                 key.interestOps(SelectionKey.OP_WRITE);
                 key.selector().wakeup();
+                return;
+            }
+
+            // if (bytesCount == -1) {
+            //     clientChannel.close();
+            //     return;
+            // }
+
+            if (bytesCount > 0) {//clear away old info
+                requestProcessor.process(key, httpParser, request, status); // NOTE : Main Function to process http request
+            } else if (bytesCount == 0) {
+                // clientChannel.close();
+                // key.selector().wakeup();
+                // key.cancel();
+            } else if (bytesCount == -1) {
+                clientChannel.close();
+                key.selector().wakeup();
+                key.cancel();
             }
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -195,23 +216,35 @@ public class MainController implements Runnable {
             System.out.println(new String(requestMsgInBytes));
             writeBuf.flip();
 
-            // while (writeBuf.hasRemaining()) {
-            clientChannel.write(writeBuf);
-            // }
+            while (writeBuf.hasRemaining()) {
+                clientChannel.write(writeBuf);
+            }
 
             writeBuf.clear();
 
-            if (request.getResponse().hasRemaining()) {
+            if (request.getState() == Request.ERROR) {
+                clientChannel.close();
+                key.selector().wakeup();
+                key.cancel();
+            } else if (request.getResponse().hasRemaining()) {
                 key.interestOps(SelectionKey.OP_WRITE);
                 key.selector().wakeup();
             } else {
                 // TODO connection 헤더에 따라 분리.
-                // keepalive 이면 interestOp read.
-                // close 이면 sc.close()
-                clientChannel.close();
-                key.selector().wakeup();
-                key.cancel();
-                // TODO key.cancel() 필요하나?
+                HttpParser parser = request.getHttpParser();
+                String connection = parser.getHeader("Connection");
+                if (connection != null && connection.equals("keep-alive")) {
+                    key.interestOps(SelectionKey.OP_READ);
+                    key.selector().wakeup();
+                } else if (connection != null && connection.equals("close")) {
+                    clientChannel.close();
+                    key.selector().wakeup();
+                    key.cancel();
+                } else {
+                    clientChannel.close();
+                    key.selector().wakeup();
+                    key.cancel();
+                }
             }
         } catch (IOException ex) {
             ex.printStackTrace();

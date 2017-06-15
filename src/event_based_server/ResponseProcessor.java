@@ -10,14 +10,18 @@ class ResponseProcessor {
     }
 
     static ByteBuffer createHeaderBuffer(int status) throws CharacterCodingException {
-        return createHeaderBuffer(status, 0, "html");
+        return createHeaderBuffer(status, 0, "html", "close");
     }
 
     static ByteBuffer createHeaderBuffer(int status, int bodyLength) throws CharacterCodingException {
-        return createHeaderBuffer(status, bodyLength, "html");
+        return createHeaderBuffer(status, bodyLength, "html", "close");
     }
 
     static ByteBuffer createHeaderBuffer(int status, int bodyLength, String extension) throws CharacterCodingException {
+        return createHeaderBuffer(status, bodyLength, "html", "close");
+    }
+
+    static ByteBuffer createHeaderBuffer(int status, int bodyLength, String extension, String connection) throws CharacterCodingException {
         CharBuffer chars = CharBuffer.allocate(Constants.MAIN_BUFFER_SIZE);
 
         // Status
@@ -26,7 +30,7 @@ class ResponseProcessor {
 
         // General headers
         chars.put(HttpParser.getDateHeader() + "\n");
-        chars.put("connection: close\n");// TODO Connection close or keep-alive. 나누기.
+        chars.put("connection: " + connection + "\n");
         chars.put("cache-control: private, max-age=0");
 
         // Response headers

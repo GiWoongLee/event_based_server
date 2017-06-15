@@ -30,8 +30,6 @@ class FileIOThread {
             }
             Path path = Paths.get("./server-root/" + fileName);
             try {
-                // RandomAccessFile raf = new RandomAccessFile("./server-root/" + filePath, "r");
-                // FileChannel channel = raf.getChannel();
                 ByteArrayWrapper data = cache.get(fileName);
                 String extension = "";
 
@@ -55,7 +53,7 @@ class FileIOThread {
                 }
 
                 request.setState(Request.WRITE);
-                request.setResponseHeader(ResponseProcessor.createHeaderBuffer(200, data.getByteArray().length, extension));
+                request.setResponseHeader(ResponseProcessor.createHeaderBuffer(200, data.getByteArray().length, extension, request.getHttpParser().getHeader("Connection")));
                 request.setData(ByteBuffer.wrap(data.getByteArray()));
 
                 clientKey.attach(request); // NOTE: send result to event queue

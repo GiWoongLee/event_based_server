@@ -12,19 +12,15 @@ class RequestProcessor {
         fileIOThread = new FileIOThread();
     }
 
-    void process(SelectionKey clientKey, byte[] httpMsg, Request request) throws IOException {
-        int status = httpParser.parseRequest(httpMsg); // NOTE : parse http request and get the result of parsing
-
+    void process(SelectionKey clientKey, HttpParser httpParser, Request request, int status) throws IOException {
         System.out.println(httpParser.getMethod()); // Test : Print out httpParsed Info
         System.out.println(httpParser.getRequestURL());
         System.out.println(httpParser.getVersion());
         System.out.println(httpParser.getHeaders());
         System.out.println(httpParser.getParams());
 
-        request.setHttpParser(httpParser);
-
         // TODO 200, 302, 400, 404, 500 처리
-        if (status == 200) { // NOTE : Valid Http Request from client
+        if (status == 200 || status == 302) { // NOTE : Valid Http Request from client
             //TODO: if(HEAVY WORKLOAD) - Defined by requests that require IO tasks
             fileIOThread.handle(clientKey, httpParser, request); // NOTE : Activate Thread Pool to process task
 
@@ -39,7 +35,7 @@ class RequestProcessor {
             // TODO: current thread process the task
         } else {
             request.setState(Request.ERROR);
-            request.setResponseHeader(ResponseProcessor.createHeaderBuffer(400));
+            request.setResponseHeader(ResponseProcessor.createHeaderBuffer(status));
 
             clientKey.attach(request); //NOTE: send error message to event queue
 

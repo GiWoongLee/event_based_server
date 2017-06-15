@@ -1,16 +1,18 @@
 package event_based_server;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 /**
  * Created by soo on 2017. 6. 10..
  */
 public class Request {
-    private byte[] data;
+    private ByteBuffer data;
     private HttpParser httpParser;
     private final long requestStartTime;
     private int state;
     private ByteBuffer responseHeader;
+    private ByteBuffer response;
 
     static final int INIT = 0;
     static final int ACCEPT = 1;
@@ -24,15 +26,21 @@ public class Request {
 
     private Request(long requestStartTime) {
         this.requestStartTime = requestStartTime;
-        state = INIT;
+        this.state = INIT;
     }
 
-    byte[] getData() {
+    ByteBuffer getData() {
         return data;
     }
 
-    void setData(byte[] data) {
+    void setData(ByteBuffer data) {
         this.data = data;
+        responseHeader.flip();
+        ByteBuffer res = ByteBuffer.allocate(responseHeader.remaining() + data.remaining());
+        res.put(responseHeader);
+        res.put(data);
+        res.flip();
+        this.response = res;
     }
 
     public HttpParser getHttpParser() {
@@ -57,9 +65,19 @@ public class Request {
 
     void setResponseHeader(ByteBuffer responseHeader) {
         this.responseHeader = responseHeader;
+        ByteBuffer res = ByteBuffer.allocate(responseHeader.remaining());
+        res.put(responseHeader);
+        res.flip();
+        this.response = res;
     }
 
     ByteBuffer getResponseHeader() {
+        // responseHeader.flip();
         return responseHeader;
+    }
+
+    ByteBuffer getResponse() {
+        // response.flip();
+        return response;
     }
 }

@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.nio.ByteBuffer;
 
 
 class FileIOThread {
@@ -23,34 +24,46 @@ class FileIOThread {
 
     private Runnable loadFile(String filePath, SelectionKey clientKey, Request request) throws IOException {
         return () -> {
-            Path path = Paths.get("./server-root/" + filePath);
+            String fileName = filePath;
+            if (fileName.isEmpty()) {
+                fileName = "index.html";
+            }
+            Path path = Paths.get("./server-root/" + fileName);
             try {
-                byte[] data;
-                ByteArrayWrapper cachedData = cache.get(filePath);
+                ByteArrayWrapper data = cache.get(fileName);
+                String extension = "";
 
-                if (cachedData != null) {
-                    System.out.println("CachedData exists!");
-                    data = cachedData.getByteArray();
+                int i = fileName.lastIndexOf('.');
+                if (i > 0) {
+                    extension = fileName.substring(i+1);
+                }
+                if (extension.equals("js")) {
+                    extension = "javascript";
+                } else if (extension.equals("css")) {
+                } else if (extension.equals("html")) {
                 } else {
-                    data = Files.readAllBytes(path);
-                    cache.put(filePath, new ByteArrayWrapper(data));
+                    extension = "plain";
                 }
 
-                request.setData(data);
+                if (data != null) {
+                    System.out.println("CachedData exists!");
+                } else {
+                    data = new ByteArrayWrapper(Files.readAllBytes(path));
+                    cache.put(filePath, data);
+                }
+
                 request.setState(Request.WRITE);
-                request.setResponseHeader(RespondProcessor.createHeaderBuffer(200, data.length));
+                request.setResponseHeader(ResponseProcessor.createHeaderBuffer(200, data.getByteArray().length, extension, request.getHttpParser().getHeader("Connection")));
+                request.setData(ByteBuffer.wrap(data.getByteArray()));
 
                 clientKey.attach(request); // NOTE: send result to event queue
 
                 clientKey.interestOps(SelectionKey.OP_WRITE);
                 clientKey.selector().wakeup();
-
-                // FIXME : When the file is bigger than the buffer, Handle it in some way with while statement
-                // while (bufferedInputStream.read(readBuffer, 0, readBuffer.length) != -1) {}
             } catch (IOException e) {
                 request.setState(Request.ERROR);
                 try {
-                    request.setResponseHeader(RespondProcessor.createHeaderBuffer(404, 0));
+                    request.setResponseHeader(ResponseProcessor.createHeaderBuffer(404));
                 } catch (CharacterCodingException e1) {
                     e1.printStackTrace();
                 }

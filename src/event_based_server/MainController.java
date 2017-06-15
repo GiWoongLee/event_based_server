@@ -3,12 +3,8 @@ package event_based_server;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.Selector;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 import java.nio.ByteBuffer;
+import java.nio.channels.*;
 import java.util.Iterator;
 
 public class MainController implements Runnable {
@@ -17,7 +13,6 @@ public class MainController implements Runnable {
     private ServerSocketChannel server;
 
     private RequestProcessor requestProcessor;
-    private RespondProcessor respondProcessor;
 
     private ByteBuffer buf;
 
@@ -27,14 +22,13 @@ public class MainController implements Runnable {
         server = ServerSocketChannel.open();
         server.configureBlocking(false);
 
-        InetAddress hostIPAddress = InetAddress.getByName(Constants.HOST); //FIXME : Fix Server Name
+        InetAddress hostIPAddress = InetAddress.getByName(Constants.HOST);
         InetSocketAddress address = new InetSocketAddress(hostIPAddress, port);
         server.socket().bind(address);
 
         server.register(selector, SelectionKey.OP_ACCEPT); //NOTE: register ssc into selector
 
         requestProcessor = new RequestProcessor();
-        respondProcessor = new RespondProcessor();
 
         // FIXME 버퍼 하나로 전체 다 충분?
         buf = ByteBuffer.allocate(Constants.MAIN_BUFFER_SIZE); //FIXME : Adjust buffer size with JMeter Test
@@ -65,6 +59,18 @@ public class MainController implements Runnable {
 
                         SelectableChannel selectedChannel = key.channel();
 
+                        // request timeout
+                        if (key.attachment() instanceof Request) {
+                            Request request = (Request) key.attachment();
+                            if (System.currentTimeMillis() > request.getRequestStartTime() + Constants.REQUEST_TIMEOUT_MILLIS) {
+                                System.out.println("This request is Time over!!");
+                                request.setState(Request.ERROR);
+                                request.setResponseHeader(RespondProcessor.createHeaderBuffer(408, 0));
+                                writer(selectedChannel, key);
+                                continue;
+                            }
+                        }
+
                         if (key.isAcceptable()) {
                             acceptor(selectedChannel);
                         } else if (key.isReadable()) {
@@ -78,7 +84,6 @@ public class MainController implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            // FIXME user 가 접속을 차단했을 때 에러에 의해 서버가 종료되는 문제 발생. exception handling 수정 필요.
             try {
                 server.close();
             } catch (IOException e) {
@@ -103,7 +108,6 @@ public class MainController implements Runnable {
             System.out.println("#socket accepted. Incoming connection from: " + clientChannel); // Test : server accepting new connection from new client
 
             clientChannel.register(selector, SelectionKey.OP_READ); //Register Client to Selector
-            // TODO attach: requestStartTime
             selector.wakeup();
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -113,6 +117,11 @@ public class MainController implements Runnable {
     private void reader(SelectableChannel selectedChannel, SelectionKey key) {
         try {
             SocketChannel clientChannel = (SocketChannel) selectedChannel;
+
+            // if (key.attachment() != null) {
+            Request request = new Request();
+            request.setState(Request.READ);
+            // }
 
             int bytesCount = clientChannel.read(buf); // from client channel, read request msg and write into buffer
 
@@ -125,12 +134,13 @@ public class MainController implements Runnable {
                 System.out.println(new String(requestMsgInBytes)); //Test : Print out Http Request Msg
                 buf.clear(); //clear away old info
 
-                requestProcessor.process(key, requestMsgInBytes); // NOTE : Main Function to process http request
+                requestProcessor.process(key, requestMsgInBytes, request); // NOTE : Main Function to process http request
             } else {
-                // TODO 여기서 하지말고 write 로 넘겨줘서 처리하기.
                 System.out.println("read(): client connection might have been dropped!");
 
-                key.attach(null); //NOTE: send error message to event queue
+                request.setState(Request.ERROR);
+                request.setResponseHeader(RespondProcessor.createHeaderBuffer(500, 0));
+                key.attach(request); //NOTE: send error message to event queue
 
                 key.interestOps(SelectionKey.OP_WRITE);
                 key.selector().wakeup();
@@ -144,18 +154,16 @@ public class MainController implements Runnable {
         // TODO(REFACTORING): Buffer and related info
         try {
             SocketChannel clientChannel = (SocketChannel) selectedChannel;
-            byte[] body;
-            ByteBuffer headerBuffer;
 
             // TODO 장기적으로 attachment 를 클래스로 관리해서 status 등 여러 정보를 받아와야 함.
-            if (key.attachment() != null) {
-                body = (byte[]) key.attachment();
-                headerBuffer = respondProcessor.createHeaderBuffer(200, body.length);
-                buf.put(headerBuffer);
-                buf.put(ByteBuffer.wrap(body));
+            Request request = (Request) key.attachment();
+            if (request.getState() == Request.ERROR) {
+                buf.put(request.getResponseHeader());
+            } else if (request.getData() != null && request.getResponseHeader() != null) {
+                buf.put(request.getResponseHeader());
+                buf.put(ByteBuffer.wrap(request.getData()));
             } else {
-                headerBuffer = respondProcessor.createHeaderBuffer(400, 0);
-                buf.put(headerBuffer);
+                buf.put(RespondProcessor.createHeaderBuffer(500, 0));
             }
 
             buf.flip();

@@ -14,7 +14,10 @@ public class MainController implements Runnable {
 
     private RequestProcessor requestProcessor;
 
-    private ByteBuffer buf;
+    private ByteBuffer readBuf;
+    private ByteBuffer writeBuf;
+    private byte[] readSlice;
+    private byte[] writeSlice;
 
     private MainController(int port) throws IOException {
         selector = Selector.open();
@@ -31,7 +34,11 @@ public class MainController implements Runnable {
         requestProcessor = new RequestProcessor();
 
         // FIXME 버퍼 하나로 전체 다 충분?
-        buf = ByteBuffer.allocate(Constants.MAIN_BUFFER_SIZE); //FIXME : Adjust buffer size with JMeter Test
+        readBuf = ByteBuffer.allocateDirect(Constants.MAIN_BUFFER_SIZE); //FIXME : Adjust buffer size with JMeter Test
+        writeBuf = ByteBuffer.allocateDirect(Constants.MAIN_BUFFER_SIZE);
+
+        readSlice = new byte[Constants.MAIN_BUFFER_SIZE];
+        writeSlice = new byte[Constants.MAIN_BUFFER_SIZE];
     }
 
     public void run() {
@@ -41,7 +48,8 @@ public class MainController implements Runnable {
             System.out.println("Waiting For Client Connection");
             System.out.println("****************************");
             while (!Thread.interrupted()) {
-                int readyKeys = selector.select(Constants.PERIODIC_SELECT);
+                // int readyKeys = selector.select(Constants.PERIODIC_SELECT);
+                int readyKeys = selector.select();
 
                 if (readyKeys > 0) {
                     Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
@@ -65,7 +73,7 @@ public class MainController implements Runnable {
                             if (System.currentTimeMillis() > request.getRequestStartTime() + Constants.REQUEST_TIMEOUT_MILLIS) {
                                 System.out.println("This request is Time over!!");
                                 request.setState(Request.ERROR);
-                                request.setResponseHeader(RespondProcessor.createHeaderBuffer(408, 0));
+                                request.setResponseHeader(ResponseProcessor.createHeaderBuffer(408));
                                 writer(selectedChannel, key);
                                 continue;
                             }
@@ -104,8 +112,9 @@ public class MainController implements Runnable {
             }
 
             clientChannel.configureBlocking(false); //Change socketChannel from Blocking(default) to Non-Blocking State
+            clientChannel.socket().setKeepAlive(true);
 
-            System.out.println("#socket accepted. Incoming connection from: " + clientChannel); // Test : server accepting new connection from new client
+            // System.out.println("#socket accepted. Incoming connection from: " + clientChannel); // Test : server accepting new connection from new client
 
             clientChannel.register(selector, SelectionKey.OP_READ); //Register Client to Selector
             selector.wakeup();
@@ -123,23 +132,23 @@ public class MainController implements Runnable {
             request.setState(Request.READ);
             // }
 
-            int bytesCount = clientChannel.read(buf); // from client channel, read request msg and write into buffer
+            int bytesCount = clientChannel.read(readBuf); // from client channel, read request msg and write into buffer
 
             if (bytesCount > 0) {
-                buf.flip(); //make buffer ready to read
+                readBuf.flip(); //make buffer ready to read
 
                 System.out.println("#channel reading. Buffer as below: ");
-                byte[] requestMsgInBytes = new byte[buf.remaining()]; // NOTE(REFACTORING) : Process ByteBuffer into String to parse as a Http Msg
-                buf.get(requestMsgInBytes); // Without this process, buf returns string not considering empty arrays
+                byte[] requestMsgInBytes = new byte[readBuf.remaining()]; // NOTE(REFACTORING) : Process ByteBuffer into String to parse as a Http Msg
+                readBuf.get(requestMsgInBytes); // Without this process, buf returns string not considering empty arrays
                 System.out.println(new String(requestMsgInBytes)); //Test : Print out Http Request Msg
-                buf.clear(); //clear away old info
+                readBuf.clear(); //clear away old info
 
                 requestProcessor.process(key, requestMsgInBytes, request); // NOTE : Main Function to process http request
             } else {
                 System.out.println("read(): client connection might have been dropped!");
 
                 request.setState(Request.ERROR);
-                request.setResponseHeader(RespondProcessor.createHeaderBuffer(500, 0));
+                request.setResponseHeader(ResponseProcessor.createHeaderBuffer(500));
                 key.attach(request); //NOTE: send error message to event queue
 
                 key.interestOps(SelectionKey.OP_WRITE);
@@ -158,33 +167,52 @@ public class MainController implements Runnable {
             // TODO 장기적으로 attachment 를 클래스로 관리해서 status 등 여러 정보를 받아와야 함.
             Request request = (Request) key.attachment();
             if (request.getState() == Request.ERROR) {
-                buf.put(request.getResponseHeader());
-            } else if (request.getData() != null && request.getResponseHeader() != null) {
-                buf.put(request.getResponseHeader());
-                buf.put(ByteBuffer.wrap(request.getData()));
+                writeBuf.put(request.getResponse());
+            } else if (request.getResponse() != null) {
+                ByteBuffer response = request.getResponse();
+                if (Constants.MAIN_BUFFER_SIZE <= response.remaining()) {
+                    response.get(writeSlice);
+                    writeBuf.put(writeSlice);
+                } else {
+                    int remaining = response.remaining();
+                    response.get(writeSlice, 0, remaining);
+                    // response.flip();
+                    // String s2 = Charset.forName("UTF-8").decode(response).toString();
+                    // String s = new String(writeSlice);
+                    writeBuf.put(writeSlice, 0, remaining);
+                    // writeBuf.flip();
+                    // writeBuf.flip();
+                }
             } else {
-                buf.put(RespondProcessor.createHeaderBuffer(500, 0));
+                writeBuf.put(ResponseProcessor.createHeaderBuffer(500));
             }
 
-            buf.flip();
+            writeBuf.flip();
 
             System.out.println("#channel writing. Buffer as below: ");
-            byte[] requestMsgInBytes = new byte[buf.remaining()]; //Test : Print out Http Request Msg
-            buf.get(requestMsgInBytes);
+            byte[] requestMsgInBytes = new byte[writeBuf.remaining()]; //Test : Print out Http Request Msg
+            writeBuf.get(requestMsgInBytes);
             System.out.println(new String(requestMsgInBytes));
-            buf.flip();
+            writeBuf.flip();
 
-            while (buf.hasRemaining()) {
-                clientChannel.write(buf);
+            // while (writeBuf.hasRemaining()) {
+            clientChannel.write(writeBuf);
+            // }
+
+            writeBuf.clear();
+
+            if (request.getResponse().hasRemaining()) {
+                key.interestOps(SelectionKey.OP_WRITE);
+                key.selector().wakeup();
+            } else {
+                // TODO connection 헤더에 따라 분리.
+                // keepalive 이면 interestOp read.
+                // close 이면 sc.close()
+                clientChannel.close();
+                key.selector().wakeup();
+                key.cancel();
+                // TODO key.cancel() 필요하나?
             }
-
-            buf.clear();
-            // TODO connection 헤더에 따라 분리.
-            // keepalive 이면 interestOp read.
-            // close 이면 sc.close()
-            clientChannel.close();
-            key.selector().wakeup();
-            // TODO key.cancel() 필요하나?
         } catch (IOException ex) {
             ex.printStackTrace();
         }

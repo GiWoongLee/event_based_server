@@ -39,7 +39,7 @@ class RequestProcessor {
             // TODO: current thread process the task
         } else {
             request.setState(Request.ERROR);
-            request.setResponseHeader(RespondProcessor.createHeaderBuffer(400, 0));
+            request.setResponseHeader(ResponseProcessor.createHeaderBuffer(400));
 
             clientKey.attach(request); //NOTE: send error message to event queue
 

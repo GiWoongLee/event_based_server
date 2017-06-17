@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.Iterator;
+import java.util.Set;
 
 public class MainController implements Runnable {
     private Selector selector;
@@ -51,6 +52,23 @@ public class MainController implements Runnable {
                 int readyKeys = selector.select(Constants.PERIODIC_SELECT);
                 // int readyKeys = selector.select();
 
+                Set keys = selector.keys();
+                Iterator<SelectionKey> iter2 = keys.iterator();
+
+                while (iter2.hasNext()) {
+                    SelectionKey key = iter2.next();
+                    // request timeout
+                    if (key.attachment() instanceof Request) {
+                        Request request = (Request) key.attachment();
+                        if (System.currentTimeMillis() > request.getRequestStartTime() + Constants.REQUEST_TIMEOUT_MILLIS) {
+                            System.out.println("This request is Time over!!");
+                            request.setState(Request.ERROR);
+                            request.setResponseHeader(ResponseProcessor.createHeaderBuffer(408));
+                            writer(key.channel(), key);
+                        }
+                    }
+                }
+
                 if (readyKeys > 0) {
                     Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
 
@@ -67,17 +85,17 @@ public class MainController implements Runnable {
 
                         SelectableChannel selectedChannel = key.channel();
 
-                        // request timeout
-                        if (key.attachment() instanceof Request) {
-                            Request request = (Request) key.attachment();
-                            if (System.currentTimeMillis() > request.getRequestStartTime() + Constants.REQUEST_TIMEOUT_MILLIS) {
-                                System.out.println("This request is Time over!!");
-                                request.setState(Request.ERROR);
-                                request.setResponseHeader(ResponseProcessor.createHeaderBuffer(408));
-                                writer(selectedChannel, key);
-                                continue;
-                            }
-                        }
+                        // // request timeout
+                        // if (key.attachment() instanceof Request) {
+                        //     Request request = (Request) key.attachment();
+                        //     if (System.currentTimeMillis() > request.getRequestStartTime() + Constants.REQUEST_TIMEOUT_MILLIS) {
+                        //         System.out.println("This request is Time over!!");
+                        //         request.setState(Request.ERROR);
+                        //         request.setResponseHeader(ResponseProcessor.createHeaderBuffer(408));
+                        //         writer(selectedChannel, key);
+                        //         continue;
+                        //     }
+                        // }
 
                         if (key.isAcceptable()) {
                             acceptor(selectedChannel);
@@ -116,7 +134,12 @@ public class MainController implements Runnable {
 
             System.out.println("#socket accepted. Incoming connection from: " + clientChannel); // Test : server accepting new connection from new client
 
-            clientChannel.register(selector, SelectionKey.OP_READ); //Register Client to Selector
+            SelectionKey key = clientChannel.register(selector, SelectionKey.OP_READ); //Register Client to Selector
+            Request request = new Request();
+            request.setState(Request.ACCEPT);
+            key.attach(request);
+            System.out.println(request.getRequestStartTime());
+
             selector.wakeup();
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -126,8 +149,7 @@ public class MainController implements Runnable {
     private void reader(SelectableChannel selectedChannel, SelectionKey key) {
         try {
             SocketChannel clientChannel = (SocketChannel) selectedChannel;
-
-            Request request = new Request();
+            Request request = (Request) key.attachment();
             request.setState(Request.READ);
 
             int bytesCount = clientChannel.read(readBuf); // from client channel, read request msg and write into buffer
